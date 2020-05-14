@@ -4,27 +4,71 @@
 # wxpython used for GUI
 import wx
 
-# used to extract game defaults from CSV files
+# Used to extract game defaults from CSV files
 import csv
 
-# generate random integers
+# Used to generate random integers
 from random import randint
 
-# Enables the Game Grid  and restart button, and disables the character/colour buttons
-def EnableGame(C1,C2,RS,Grid):
+# Used to import images
+from PIL import Image
+
+# Enables the Game Grid  and restart button, and disables the character/colour buttons and returns the character/colour they chose
+def EnableGame(C1,C2,RS,Grid, user):
     C1.Disable()
     C2.Disable()
     RS.Enable()
-    for i in Grid.GetChildren():
-        i.GetWindow().Enable()
+    for children in Grid.GetChildren():
+        children.GetWindow().Enable()
+
+    return user
 
 # Disables the Games Grid and restart button, and enables the character/colour buttons
 def DisableGame(C1,C2,RS,Grid):
     C1.Enable()
     C2.Enable()
     RS.Disable()
-    for i in Grid.GetChildren():
-        i.GetWindow().Disable()         
+    for children in Grid.GetChildren():
+        children.GetWindow().Disable()
+
+# Sets the button name and button bitmap accordingly when a piece is placed/moved
+def PlacePiece(folder,text, window):
+    if (text == ""):
+        pic = wx.Bitmap(1,1)
+        pic.SetMaskColour("black")
+    else:
+        try:
+            pic = wx.Image(folder+text+".png", wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+        except:
+            pass
+    window.SetBitmap(pic)
+    window.SetBitmapDisabled(pic)
+    window.SetName(text)
+
+# Sets the colours for the Scrabble Board
+def SetScrabColours(window):
+    if (window.GetLabel() == "3W"):
+        window.SetBackgroundColour("yellow")
+    elif (window.GetLabel() == "2W"):
+        window.SetBackgroundColour("red")
+    elif (window.GetLabel() == "3L"):
+        window.SetBackgroundColour("green")
+    elif (window.GetLabel() == "2L"):
+        window.SetBackgroundColour("blue")
+    else:
+        window.SetBackgroundColour("light blue")
+
+# Extracts informations from csv file and returns it as an array
+def FromCSV(file):
+    array = []
+    try:
+        with open(file) as csvfile:
+            reader = csv.reader(csvfile)
+            for row in reader:
+                array.append(row)
+    except IOError:
+        pass
+    return array  
 
 # Creates Home Frame where user chooses which game to play
 class Home(wx.Frame):
@@ -92,8 +136,9 @@ class TTT(wx.Frame):
         self.ttt = wx.GridSizer(3, 3, 0, 0)
         for i in range(0,9):
             self.ttt.Add(wx.Button(panel),0,wx.EXPAND)
-        for i in self.ttt.GetChildren():
-            i.GetWindow().Bind(wx.EVT_BUTTON, self.pressttt)
+        for children in self.ttt.GetChildren():
+            children.GetWindow().Bind(wx.EVT_BUTTON, self.pressttt)
+            children.GetWindow().SetBackgroundColour("white")
 
         # Initialize user character
         self.User = ""
@@ -119,8 +164,7 @@ class TTT(wx.Frame):
         settings = wx.BoxSizer(wx.VERTICAL)
         settings.Add(self.ttt, 1, wx.ALL | wx.EXPAND, 5)
         settings.Add(choose, 0, wx.ALL | wx.EXPAND, 5)
-        settings.Add(self.restart, 0, wx.ALL | wx.EXPAND, 5)
-                   
+        settings.Add(self.restart, 0, wx.ALL | wx.EXPAND, 5)           
         panel.SetSizer(settings)
         self.Show()
 
@@ -147,24 +191,22 @@ class TTT(wx.Frame):
 
     # Enables grid and restart buttons when a character is chosen
     def pressO(self, event):
-        EnableGame(self.O,self.X,self.restart,self.ttt)
-        self.User = "O"
+        self.User = EnableGame(self.O,self.X,self.restart,self.ttt,"O")
 
     def pressX(self, event):
-        EnableGame(self.O,self.X,self.restart,self.ttt)
-        self.User = "X"
+        self.User = EnableGame(self.O,self.X,self.restart,self.ttt,"X")
 
+    # Resets board to the setup before the character is chosen
     def pressRS(self, event):
         DisableGame(self.O,self.X,self.restart,self.ttt)
-        self.User = ""
-        for i in self.ttt.GetChildren():
-            i.GetWindow().SetLabel("")
-        for i in range(0,3):
-            for j in range(0,3):
-                self.Board[i][j] = ""
-
+        for children in self.ttt.GetChildren():
+            self.Board[int(children.GetWindow().GetId()/10)-1][children.GetWindow().GetId()%10-1] = ""
+            PlacePiece("", "", children.GetWindow())
+            
+    # The button clicked is occupied by the User's character and is disabled
     def pressttt(self, event):
-        event.GetEventObject().SetLabel(self.User)
+        self.Board[int(event.GetEventObject().GetId()/10)-1][event.GetEventObject().GetId()%10-1] = self.User
+        PlacePiece("Tic-Tac-Toe/", self.User, event.GetEventObject())
         event.GetEventObject().Disable()
 
 # --------------------------------------------------------------------------------------------
@@ -180,8 +222,9 @@ class C4(wx.Frame):
         self.c4 = wx.GridSizer(6, 7, 0, 0)
         for i in range(0,42):
             self.c4.Add(wx.Button(panel),0,wx.EXPAND)
-        for i in self.c4.GetChildren():
-            i.GetWindow().Bind(wx.EVT_BUTTON, self.pressc4)
+        for children in self.c4.GetChildren():
+            children.GetWindow().Bind(wx.EVT_BUTTON, self.pressc4)
+            children.GetWindow().SetBackgroundColour("medium blue")
 
         # Initialize user character
         self.User = ""    
@@ -208,7 +251,6 @@ class C4(wx.Frame):
         settings.Add(self.c4, 1, wx.ALL | wx.EXPAND, 5)
         settings.Add(choose, 0, wx.ALL | wx.EXPAND, 5)
         settings.Add(self.restart, 0, wx.ALL | wx.EXPAND, 5)
-
         panel.SetSizer(settings)
         self.Show()
 
@@ -217,7 +259,7 @@ class C4(wx.Frame):
         # Create 2D array for board
         self.Board = []
         
-        # Populate array
+        # Populates array
         # The IDs of each button are set with a hash formula for easy access
         i = 0
         j = 0
@@ -235,21 +277,17 @@ class C4(wx.Frame):
 
     # Enables grid and restart buttons when a colour is chosen
     def pressRed(self, event):
-        EnableGame(self.Red,self.Yellow,self.restart,self.c4)
-        self.User = "RED"
+        self.User = EnableGame(self.Red,self.Yellow,self.restart,self.c4,"RED")
 
     def pressYellow(self, event):
-        EnableGame(self.Red,self.Yellow,self.restart,self.c4)
-        self.User = "YELLOW"
+        self.User = EnableGame(self.Red,self.Yellow,self.restart,self.c4,"YELLOW")
 
+    # Resets board to the setup before the character is chosen
     def pressRS(self, event):
         DisableGame(self.Red,self.Yellow,self.restart,self.c4)
-        self.User = ""
-        for i in self.c4.GetChildren():
-            i.GetWindow().SetLabel("")
-        for i in range(0,6):
-            for j in range(0,7):
-                self.Board[i][j] = ""
+        for children in self.c4.GetChildren():
+            self.Board[int(children.GetWindow().GetId()/10)-1][children.GetWindow().GetId()%10-1] = ""
+            PlacePiece("", "", children.GetWindow())
                 
     # Places piece in the lowest available spot in the selected column
     # The column is disabled when it becomes full
@@ -259,7 +297,7 @@ class C4(wx.Frame):
             if (self.Board[i][col] == "" and (i == 5 or self.Board[i+1][col] != "")):
                 for children in self.c4.GetChildren():
                     if (children.GetWindow().GetId() == (i+1)*10+(col+1)):
-                        children.GetWindow().SetLabel(self.User)
+                        PlacePiece("Colours/", self.User, children.GetWindow())
                         self.Board[i][col] = self.User
                     if (i == 0):
                         for disable in range(0,6):
@@ -279,15 +317,16 @@ class Scrab(wx.Frame):
         self.scrab = wx.GridSizer(15, 15, 0, 0)
         for i in range(0,225):
             self.scrab.Add(wx.Button(panel),0,wx.EXPAND)
-        for i in self.scrab.GetChildren():
-            i.GetWindow().Bind(wx.EVT_BUTTON, self.pressscrab)
+        for children in self.scrab.GetChildren():
+            children.GetWindow().Bind(wx.EVT_BUTTON, self.pressscrab)
 
         # 7x1 Grid for Letter Rack
         self.rack = wx.GridSizer(1, 7, 0, 0)
         for i in range(0,7):
             self.rack.Add(wx.Button(panel),0,wx.EXPAND)
-        for i in self.rack.GetChildren():
-            i.GetWindow().Bind(wx.EVT_BUTTON, self.pressrack)
+        for children in self.rack.GetChildren():
+            children.GetWindow().Bind(wx.EVT_BUTTON, self.pressrack)
+            children.GetWindow().SetBackgroundColour("tan")
 
         # 2nd Row (Rack, Shuffle, Play, and Solve Mode)
         row = wx.BoxSizer(wx.HORIZONTAL)
@@ -309,34 +348,20 @@ class Scrab(wx.Frame):
         settings.Add(self.scrab, 1, wx.ALL | wx.EXPAND, 5)
         settings.Add(row, 0, wx.ALL | wx.EXPAND, 5)
         settings.Add(self.restart, 0, wx.ALL | wx.EXPAND, 5)
-  
         panel.SetSizer(settings)
         self.Show()
 
-        # Extract info for scrabble values from csv file
-        self.values = []
-        with open("Scrabble_Values.txt") as csvfile:
-            reader = csv.reader(csvfile)
-            for row in reader:
-                self.values.append(row)
 
-        # Extract info for scrabble tiles from csv file
-        self.tiles_file = []
-        with open("Scrabble_Tiles.txt") as csvfile:
-            reader = csv.reader(csvfile)
-            for row in reader:
-                self.tiles_file.append(row)
+        # Extract info from scrabble files
+        self.board_setup = FromCSV("Scrabble/Scrabble_Board.txt")
+        self.values = FromCSV("Scrabble/Scrabble_Values.txt")
+        self.tiles_file = FromCSV("Scrabble/Scrabble_Tiles.txt")
+        
+        # Populate the bag with all tiles
         self.tiles = []
         for i in range (0,27):
             for j in range (0,int(self.tiles_file[i][1])):
                 self.tiles.append(self.tiles_file[i][0])
-
-        # Extract info for scrabble board from csv file
-        self.board_setup = []
-        with open("Scrabble_Board.txt") as csvfile:
-            reader = csv.reader(csvfile)
-            for row in reader:
-                self.board_setup.append(row)
                 
         # Create 2D array for board
         self.Board = []
@@ -357,20 +382,14 @@ class Scrab(wx.Frame):
                 j = 0
                 i += 1
 
+        # Fill board with multipliers
         for i in range(0,61):
             self.Board[int(self.board_setup[i][0])][int(self.board_setup[i][1])] = self.board_setup[i][2]
-
-        # Fill board with multipliers
-        i = 0
-        j = 0
         for children in self.scrab.GetChildren():
-            children.GetWindow().SetLabel(self.Board[i][j])
-            if (j < 14):
-                j += 1
-            else:
-                j = 0
-                i += 1
+            children.GetWindow().SetLabel(self.Board[int(children.GetWindow().GetId()/100)-10][children.GetWindow().GetId()%100-10])
+            SetScrabColours(children.GetWindow()) 
 
+        # Initializes rack arrays
         self.rack_arr = []
         self.comp_rack_arr = []
 
@@ -395,12 +414,11 @@ class Scrab(wx.Frame):
                     self.comp_rack_arr.append(self.tiles[tile])
                     del self.tiles[tile]
 
-        self.click = "first"
-        self.first_click = 0
+        self.click = -1
                     
     # Shuffles tiles in the rack
     def pressShuffle(self, event):
-        self.click = "first"
+        self.click = -1
         rack = []
         for children in self.rack.GetChildren():
             rack.append(children.GetWindow().GetLabel())
@@ -408,13 +426,18 @@ class Scrab(wx.Frame):
         for children in self.rack.GetChildren():
             value = randint(0,len(rack)-1)
             children.GetWindow().SetLabel(rack[value])
+            if (len(children.GetWindow().GetLabel()) == 1):
+                children.GetWindow().SetBackgroundColour("tan")
+            else:
+                children.GetWindow().SetBackgroundColour("grey")
             self.rack_arr[i] = rack[value]
             del rack[value]
             i += 1
 
     # Disables tiles of the board when a word is played
+    # Fills rest of rack with random remaining tiles 
     def pressPlay(self, event):
-        self.click = "first"
+        self.click = -1
         for children in self.scrab.GetChildren():
             if (len(children.GetWindow().GetLabel()) == 1):
                 children.GetWindow().Disable()
@@ -423,11 +446,13 @@ class Scrab(wx.Frame):
             if (children.GetWindow().GetLabel() == "" and len(self.tiles) > 0):
                 tile = randint(0,len(self.tiles)-1)
                 children.GetWindow().SetLabel(self.tiles[tile])
+                children.GetWindow().SetBackgroundColour("tan")
                 self.rack_arr[i] = self.tiles[tile]
                 del self.tiles[tile]
             i += 1
                 
 
+    # Resets board to the setup before the character is chosen
     def pressRS(self, event):
 
         self.tiles = []
@@ -435,24 +460,20 @@ class Scrab(wx.Frame):
             for j in range (0,int(self.tiles_file[i][1])):
                 self.tiles.append(self.tiles_file[i][0])
 
+        k = 0
         for i in range(0,15):
             for j in range(0,15):
-                self.Board[i][j] = ""
-
-        for i in range(0,61):
-            self.Board[int(self.board_setup[i][0])][int(self.board_setup[i][1])] = self.board_setup[i][2]
+                if (k < 61 and i == int(self.board_setup[k][0]) and j == int(self.board_setup[k][1])):
+                    self.Board[i][j] = self.board_setup[k][2]
+                    k += 1
+                else:
+                    self.Board[i][j] = ""
 
         # Fill board with multipliers
-        i = 0
-        j = 0
         for children in self.scrab.GetChildren():
             children.GetWindow().Enable()
-            children.GetWindow().SetLabel(self.Board[i][j])
-            if (j < 14):
-                j += 1
-            else:
-                j = 0
-                i += 1
+            children.GetWindow().SetLabel(self.Board[int(children.GetWindow().GetId()/100)-10][children.GetWindow().GetId()%100-10])
+            SetScrabColours(children.GetWindow())
 
         # Who goes first is determined by chance
         value = randint(0, 1)
@@ -464,6 +485,7 @@ class Scrab(wx.Frame):
                 for children in self.rack.GetChildren():
                     tile = randint(0,len(self.tiles)-1)
                     children.GetWindow().SetLabel(self.tiles[tile])
+                    children.GetWindow().SetBackgroundColour("tan")
                     self.rack_arr[j] = self.tiles[tile]
                     del self.tiles[tile]
                     j += 1
@@ -473,6 +495,7 @@ class Scrab(wx.Frame):
                     self.comp_rack_arr[j] = self.tiles[tile]
                     del self.tiles[tile]
 
+    # Places the piece that was chosen onto an empty space on the board
     def pressscrab(self, event):
         if (len(event.GetEventObject().GetLabel()) == 1):
             empty = False
@@ -481,19 +504,25 @@ class Scrab(wx.Frame):
                     if (children.GetWindow().GetLabel() == ""):
                         empty = True
                         children.GetWindow().SetLabel(event.GetEventObject().GetLabel())
+                        children.GetWindow().SetBackgroundColour("tan")
             event.GetEventObject().SetLabel(self.Board[int(event.GetEventObject().GetId()/100)-10][event.GetEventObject().GetId()%100-10])
+            SetScrabColours(event.GetEventObject())
         else:
-            if (self.click == "second"):
-                event.GetEventObject().SetLabel(self.rack_arr[self.first_click])
+            if (self.click >= 0):
+                event.GetEventObject().SetLabel(self.rack_arr[self.click])
+                event.GetEventObject().SetBackgroundColour("tan")
                 for children in self.rack.GetChildren():
-                    if (children.GetWindow().GetId() == self.first_click):
+                    if (children.GetWindow().GetId() == self.click):
                         children.GetWindow().SetLabel("")
-                self.click = "first"
+                        children.GetWindow().SetBackgroundColour("grey")
+                self.click = -1
 
+    # Chooses a piece from the rack to place
     def pressrack(self, event):
-        self.first_click = event.GetEventObject().GetId()
-        if (self.first_click != ""):
-            self.click = "second"
+        if (event.GetEventObject().GetLabel() != ""):
+            self.click = event.GetEventObject().GetId()
+        else:
+            self.click = -1
 
 # --------------------------------------------------------------------------------------------
 
@@ -507,9 +536,19 @@ class Check(wx.Frame):
         # 8x8 Grid for Checkers
         self.check = wx.GridSizer(8, 8, 0, 0)
         for i in range(0,64):
-            self.check.Add(wx.Button(panel),0,wx.EXPAND)
-        for i in self.check.GetChildren():
-            i.GetWindow().Bind(wx.EVT_BUTTON, self.presscheck)
+            self.check.Add(wx.Button(panel),0,wx.EXPAND)    
+        # Colours board according to checkers board layout
+        i = 1
+        switch = 0
+        for children in self.check.GetChildren():
+            children.GetWindow().Bind(wx.EVT_BUTTON, self.presscheck)
+            if (i%2 == switch):
+                children.GetWindow().SetBackgroundColour("tan")
+            else:
+                children.GetWindow().SetBackgroundColour("wheat")
+            if (i%8 == 0):
+                switch = 1-switch
+            i += 1
 
         # Initialize user character
         self.User = ""
@@ -536,18 +575,13 @@ class Check(wx.Frame):
         settings.Add(self.check, 1, wx.ALL | wx.EXPAND, 5)
         settings.Add(choose, 0, wx.ALL | wx.EXPAND, 5)
         settings.Add(self.restart, 0, wx.ALL | wx.EXPAND, 5)
-
         panel.SetSizer(settings)
         self.Show()
 
         DisableGame(self.Red,self.Black,self.restart,self.check)
 
-        # Extract info for checkers board from csv file
-        self.board_setup = []
-        with open("Checkers_Board.txt") as csvfile:
-            reader = csv.reader(csvfile)
-            for row in reader:
-                self.board_setup.append(row)
+        # Extract info for chess board from csv file
+        self.board_setup = FromCSV("Checkers/Checkers_Board.txt")
                 
         # Create 2D array for board
         self.Board = []
@@ -568,85 +602,62 @@ class Check(wx.Frame):
                 j = 0
                 i += 1
 
+        # Places pieces on the board as if the user is 'RED'
         for i in range(0,24):
             self.Board[int(self.board_setup[i][0])][int(self.board_setup[i][1])] = self.board_setup[i][2]
 
-        self.click = "first"
-        self.first_click = 0
+        self.click = 0
         
-    # Enables grid and restart buttons when a colour is chosen
+    # Enables grid and restart buttons when a character is chosen
     def pressRed(self, event):
-        EnableGame(self.Red,self.Black,self.restart,self.check)
-        self.User = "RED"
+        self.User = EnableGame(self.Red,self.Black,self.restart,self.check,"RED")
 
         # Sets up the board with pieces
-        i = 0
-        j = 0
         for children in self.check.GetChildren():
-            children.GetWindow().SetLabel(self.Board[i][j])
-            if (j < 7):
-                j += 1
-            else:
-                j = 0
-                i += 1
+            PlacePiece("Colours/", self.Board[int(children.GetWindow().GetId()/10)-1][children.GetWindow().GetId()%10-1], children.GetWindow())
 
     def pressBlack(self, event):
-        EnableGame(self.Red,self.Black,self.restart,self.check)
-        self.User = "BLACK"
+        self.User = EnableGame(self.Red,self.Black,self.restart,self.check,"BLACK")
 
         # Sets up the board with pieces
         # Swaps Red abd Black pieces
-        i = 0
-        j = 0
-        for children in self.check.GetChildren():
-            children.GetWindow().SetLabel(self.Board[7-i][7-j])
-            if (j < 7):
-                j += 1
-            else:
-                j = 0
-                i += 1
-        i = 0
-        j = 0
-        for children in self.check.GetChildren():
-            self.Board[i][j] = children.GetWindow().GetLabel()
-            if (j < 7):
-                j += 1
-            else:
-                j = 0
-                i += 1
 
+        for children in self.check.GetChildren():
+            PlacePiece("Colours/", self.Board[7-(int(children.GetWindow().GetId()/10)-1)][7-(children.GetWindow().GetId()%10-1)], children.GetWindow())
+        for children in self.check.GetChildren():          
+            self.Board[int(children.GetWindow().GetId()/10)-1][children.GetWindow().GetId()%10-1] = children.GetWindow().GetName()
+
+    # Resets board to the setup before the character is chosen 
     def pressRS(self, event):
+        self.click = 0
         DisableGame(self.Red,self.Black,self.restart,self.check)
-        self.User = ""
-        for i in self.check.GetChildren():
-            i.GetWindow().SetLabel("")
-        for i in range(0,6):
-            for j in range(0,7):
-                self.Board[i][j] = ""
+        for children in self.check.GetChildren():
+            self.Board[int(children.GetWindow().GetId()/10)-1][children.GetWindow().GetId()%10-1] = ""
+            PlacePiece("", "", children.GetWindow())
         for i in range(0,24):
             self.Board[int(self.board_setup[i][0])][int(self.board_setup[i][1])] = self.board_setup[i][2]
 
+    # Moves selected piece to where the user clicks next
     def presscheck(self, event):
-        
+
         # First click establishes which piece the user wants to move
-        if (self.click == "first"):
-            if (event.GetEventObject().GetLabel()[0:5] == self.User):
-                self.click = "second"
-                self.first_button = event.GetEventObject().GetId()
+        if (self.click == 0):
+            if (event.GetEventObject().GetName()[0:5] == self.User):
+                self.click = event.GetEventObject().GetId()
                 
         # Second click moves the piece to the clicked spot
         # A new piece can be chosen to be moved by clicking on it
         else:
-            if (event.GetEventObject().GetLabel()[0:5] != self.User):
-                self.click = "first"
-                event.GetEventObject().SetLabel(self.Board[int(self.first_button/10)-1][self.first_button%10-1])
-                self.Board[int(event.GetEventObject().GetId()/10)-1][event.GetEventObject().GetId()%10-1] = self.Board[int(self.first_button/10)-1][self.first_button%10-1]
-                self.Board[int(self.first_button/10)-1][self.first_button%10-1] = ""
+            if (event.GetEventObject().GetName()[0:5] != self.User):
+                PlacePiece("Colours/", self.Board[int(self.click/10)-1][self.click%10-1], event.GetEventObject())
+                self.Board[int(event.GetEventObject().GetId()/10)-1][event.GetEventObject().GetId()%10-1] = self.Board[int(self.click/10)-1][self.click%10-1]
+                self.Board[int(self.click/10)-1][self.click%10-1] = ""
                 for children in self.check.GetChildren():
-                    if (children.GetWindow().GetId() == self.first_button):
-                        children.GetWindow().SetLabel("")
+                    if (children.GetWindow().GetId() == self.click):
+                        PlacePiece("", "", children.GetWindow())
+                self.click = 0
             else:
-                self.first_button = event.GetEventObject().GetId()
+                self.click = event.GetEventObject().GetId()
 
 # --------------------------------------------------------------------------------------------
 
@@ -661,8 +672,19 @@ class Chess(wx.Frame):
         self.chess = wx.GridSizer(8, 8, 0, 0)
         for i in range(0,64):
             self.chess.Add(wx.Button(panel),0,wx.EXPAND)
-        for i in self.chess.GetChildren():
-            i.GetWindow().Bind(wx.EVT_BUTTON, self.presschess)
+
+        # Colours board according to chess board layout
+        i = 1
+        switch = 0
+        for children in self.chess.GetChildren():
+            children.GetWindow().Bind(wx.EVT_BUTTON, self.presschess)
+            if (i%2 == switch):
+                children.GetWindow().SetBackgroundColour("tan")
+            else:
+                children.GetWindow().SetBackgroundColour("wheat")
+            if (i%8 == 0):
+                switch = 1-switch
+            i += 1
 
         # Initialize user character
         self.User = ""
@@ -684,22 +706,18 @@ class Chess(wx.Frame):
         self.restart = wx.Button(panel, label='Restart Game')
         self.restart.Bind(wx.EVT_BUTTON, self.pressRS)
 
+        # Adds all buttons to frame
         settings = wx.BoxSizer(wx.VERTICAL)
         settings.Add(self.chess, 1, wx.ALL | wx.EXPAND, 5)
         settings.Add(choose, 0, wx.ALL | wx.EXPAND, 5)
         settings.Add(self.restart, 0, wx.ALL | wx.EXPAND, 5)
-
         panel.SetSizer(settings)
         self.Show()
 
         DisableGame(self.White,self.Black,self.restart,self.chess)
 
         # Extract info for chess board from csv file
-        self.board_setup = []
-        with open("Chess_Board.txt") as csvfile:
-            reader = csv.reader(csvfile)
-            for row in reader:
-                self.board_setup.append(row)
+        self.board_setup = FromCSV("Chess/Chess_Board.txt")
                 
         # Create 2D array for board
         self.Board = []
@@ -720,85 +738,61 @@ class Chess(wx.Frame):
                 j = 0
                 i += 1
 
+        # Sets up pieces as if user is 'WHITE'
         for i in range(0,32):
-            self.Board[int(self.board_setup[i][0])][int(self.board_setup[i][1])] = self.board_setup[i][2]+" "+self.board_setup[i][3]
+            self.Board[int(self.board_setup[i][0])][int(self.board_setup[i][1])] = self.board_setup[i][2]+"_"+self.board_setup[i][3]
 
-        self.click = "first"
-        self.first_click = 0
+        self.click = 0
         
     # Enables grid and restart buttons when a character is chosen
     def pressWhite(self, event):
-        EnableGame(self.White,self.Black,self.restart,self.chess)
-        self.User = "WHITE"
+        self.User = EnableGame(self.White,self.Black,self.restart,self.chess,"WHITE")
 
         # Sets up the board with pieces
-        i = 0
-        j = 0
         for children in self.chess.GetChildren():
-            children.GetWindow().SetLabel(self.Board[i][j])
-            if (j < 7):
-                j += 1
-            else:
-                j = 0
-                i += 1
+            PlacePiece("Chess/", self.Board[int(children.GetWindow().GetId()/10)-1][children.GetWindow().GetId()%10-1], children.GetWindow())
 
     def pressBlack(self, event):
-        EnableGame(self.White,self.Black,self.restart,self.chess)
-        self.User = "BLACK"
+        self.User = EnableGame(self.White,self.Black,self.restart,self.chess,"BLACK")
 
         # Sets up the board with pieces
-        # Swaps Red abd Black pieces
-        i = 0
-        j = 0
+        # Swaps White abd Black pieces
         for children in self.chess.GetChildren():
-            children.GetWindow().SetLabel(self.Board[7-i][7-j])
-            if (j < 7):
-                j += 1
-            else:
-                j = 0
-                i += 1
-        i = 0
-        j = 0
-        for children in self.chess.GetChildren():
-            self.Board[i][j] = children.GetWindow().GetLabel()
-            if (j < 7):
-                j += 1
-            else:
-                j = 0
-                i += 1
+            PlacePiece("Chess/", self.Board[7-(int(children.GetWindow().GetId()/10)-1)][7-(children.GetWindow().GetId()%10-1)], children.GetWindow())
+        for children in self.chess.GetChildren():          
+            self.Board[int(children.GetWindow().GetId()/10)-1][children.GetWindow().GetId()%10-1] = children.GetWindow().GetName()
 
+    # Resets board to the setup before the character is chosen
     def pressRS(self, event):
+        self.click = 0
         DisableGame(self.White,self.Black,self.restart,self.chess)
-        self.User = ""
-        for i in self.chess.GetChildren():
-            i.GetWindow().SetLabel("")
-        for i in range(0,6):
-            for j in range(0,7):
-                self.Board[i][j] = ""
+        for children in self.chess.GetChildren():
+            self.Board[int(children.GetWindow().GetId()/10)-1][children.GetWindow().GetId()%10-1] = ""
+            PlacePiece("", "", children.GetWindow())
         for i in range(0,32):
-            self.Board[int(self.board_setup[i][0])][int(self.board_setup[i][1])] = self.board_setup[i][2]+" "+self.board_setup[i][3]
+            self.Board[int(self.board_setup[i][0])][int(self.board_setup[i][1])] = self.board_setup[i][2]+"_"+self.board_setup[i][3]
 
+    # Places selected piece to where the user clicks next
     def presschess(self, event):
 
         # First click establishes which piece the user wants to move
-        if (self.click == "first"):
-            if (event.GetEventObject().GetLabel()[0:5] == self.User):
-                self.click = "second"
-                self.first_button = event.GetEventObject().GetId()
+        if (self.click == 0):
+            if (event.GetEventObject().GetName()[0:5] == self.User):
+                self.click = event.GetEventObject().GetId()
                 
         # Second click moves the piece to the clicked spot
         # A new piece can be chosen to be moved by clicking on it
         else:
-            if (event.GetEventObject().GetLabel()[0:5] != self.User):
-                self.click = "first"
-                event.GetEventObject().SetLabel(self.Board[int(self.first_button/10)-1][self.first_button%10-1])
-                self.Board[int(event.GetEventObject().GetId()/10)-1][event.GetEventObject().GetId()%10-1] = self.Board[int(self.first_button/10)-1][self.first_button%10-1]
-                self.Board[int(self.first_button/10)-1][self.first_button%10-1] = ""
+            if (event.GetEventObject().GetName()[0:5] != self.User):
+                PlacePiece("Chess/", self.Board[int(self.click/10)-1][self.click%10-1], event.GetEventObject())
+                self.Board[int(event.GetEventObject().GetId()/10)-1][event.GetEventObject().GetId()%10-1] = self.Board[int(self.click/10)-1][self.click%10-1]
+                self.Board[int(self.click/10)-1][self.click%10-1] = ""
                 for children in self.chess.GetChildren():
-                    if (children.GetWindow().GetId() == self.first_button):
-                        children.GetWindow().SetLabel("")
+                    if (children.GetWindow().GetId() == self.click):
+                        PlacePiece("", "", children.GetWindow())
+                self.click = 0
             else:
-                self.first_button = event.GetEventObject().GetId()                
+                self.click = event.GetEventObject().GetId()   
 
 # --------------------------------------------------------------------------------------------
 
