@@ -7,7 +7,49 @@ from random import randint
 import wx
 
 # Import functions from main python file
-from Games import FromCSV
+from Games import FromCSV, onHover, offHover, gameMode, gameGrid, RS_Btn
+
+
+# Resets the game board, racks, and tiles
+def resetGame(self):
+    # Populate the bag with all tiles
+    for i in range(0, 27):
+        for j in range(0, int(self.tiles_file[i][1])):
+            self.tiles.append(self.tiles_file[i][0])
+
+    # Fill board with multipliers
+    self.multipliers = [[""] * 15 for i in range(15)]
+    for i in range(0, 61):
+        self.game.Board[int(self.board_setup[i][0])][int(self.board_setup[i][1])].SetLabel(self.board_setup[i][2])
+        self.multipliers[int(self.board_setup[i][0])][int(self.board_setup[i][1])] = self.board_setup[i][2]
+        SetScrabColours(self.game.Board[int(self.board_setup[i][0])][int(self.board_setup[i][1])])
+
+    # Who goes first is determined by chance
+    value = randint(0, 1)
+    for i in range(0, 2):
+
+        # Populates both racks with tiles from the bag randomly
+        # Sets ID of rack buttons to its index number
+        if i == value:
+            j = 0
+            for children in self.rack.GetChildren():
+                tile = randint(0, len(self.tiles) - 1)
+                children.GetWindow().SetLabel(self.tiles[tile])
+                children.GetWindow().SetId(j)
+                self.rack_arr.append(children.GetWindow())
+                del self.tiles[tile]
+                j += 1
+        else:
+            for j in range(0, 7):
+                tile = randint(0, len(self.tiles) - 1)
+                self.comp_rack_arr.append(self.tiles[tile])
+                del self.tiles[tile]
+
+    self.Shuffle.Disable()
+    for children in self.rack:
+        children.GetWindow().Disable()
+
+    return self
 
 
 # Sets the colours for the Scrabble Board
@@ -24,17 +66,154 @@ def SetScrabColours(window):
         window.SetBackgroundColour("light blue")
 
 
+# Moves tiles from the rack or board to another spot on the rack or board
+def moveTile(self, event):
+    # Condition if the user selected a piece from the rack
+    if len(str(self.click)) == 1:
+        event.GetEventObject().SetLabel(self.rack_arr[self.click].GetLabel())
+        event.GetEventObject().SetBackgroundColour("tan")
+
+        self.rack_arr[self.click].SetLabel("")
+        self.rack_arr[self.click].SetBackgroundColour("grey")
+
+    # Condition if the user selected a piece from the board
+    else:
+        old_row = int(self.click / 100) - 10
+        old_col = self.click % 100 - 10
+
+        event.GetEventObject().SetLabel(self.game.Board[old_row][old_col].GetLabel())
+        event.GetEventObject().SetBackgroundColour("tan")
+
+        self.game.Board[old_row][old_col].SetLabel(self.multipliers[old_row][old_col])
+        SetScrabColours(self.game.Board[old_row][old_col])
+
+    return self
+
+
+# Enables or Disables the play button if the play on the board is valid
+def checkValidity(self, event):
+
+    # Updates the list of new tiles placed
+    if len(str(event.GetEventObject().GetId())) > 1:
+        self.new_tiles.append(event.GetEventObject().GetId())
+
+        if len(str(self.click)) > 1:
+            self.new_tiles.remove(self.click)
+
+    else:
+        self.new_tiles.remove(self.click)
+
+    self.click = -1
+
+    # Creates a temporary list to modify
+    temp_list = list(self.new_tiles)
+    words = []
+
+    # Parses through placed tiles if there is at least one placed tile
+    if len(self.new_tiles):
+        tile = temp_list[0]
+        row = int(tile / 100) - 10
+        col = tile % 100 - 10
+
+        # Sets direction of move if there are at least 2 new tiles
+        direction = "HORIZONTAL"
+        if len(temp_list) > 1 and int(temp_list[1] / 100) - 10 != row:
+            direction = "VERTICAL"
+
+        touchCheck = False
+
+        # Creates word by concatenating all connected tiles
+        h_word = ""
+        for i in range(2):
+            while len(self.game.Board[row][col].GetLabel()) == 1 and -1 < col < 15 and -1 < row < 15:
+
+                # Starts from first tile and parses to the end, then goes back and parses to the start
+                if i:
+                    h_word = self.game.Board[row][col].GetLabel() + h_word
+                else:
+                    h_word += self.game.Board[row][col].GetLabel()
+
+                # Checks if at least one placed tile is touching a previously placed tile
+                if self.game.Board[row][col].IsEnabled():
+
+                    if row < 14 and not self.game.Board[row + 1][col].IsEnabled():
+                        touchCheck = True
+                    elif row > 0 and not self.game.Board[row - 1][col].IsEnabled():
+                        touchCheck = True
+                    elif col < 14 and not self.game.Board[row][col + 1].IsEnabled():
+                        touchCheck = True
+                    elif col > 0 and not self.game.Board[row][col - 1].IsEnabled():
+                        touchCheck = True
+
+                    # The centre piece must be filled on the first turn
+                    elif len(self.game.Board[7][7].GetLabel()) == 1 and self.game.Board[7][7].IsEnabled():
+                        touchCheck = True
+
+                    # Removes connected tiles so that duplicate parsing does not occur
+                    temp_list.remove(self.game.Board[row][col].GetId())
+
+                    # Checks the opposite direction for each newly placed tile
+                    v_word = ""
+                    for j in range(2):
+                        while len(self.game.Board[row][col].GetLabel()) == 1 and -1 < col < 15 and -1 < row < 15:
+
+                            if j:
+                                v_word = self.game.Board[row][col].GetLabel() + v_word
+                            else:
+                                v_word += self.game.Board[row][col].GetLabel()
+
+                            if direction == "HORIZONTAL":
+                                row += 1 - j*2
+                            else:
+                                col += 1 - j*2
+
+                        if not j:
+                            if direction == "HORIZONTAL":
+                                row = int(tile / 100) - 10 - 1
+                            else:
+                                col = tile % 100 - 10 - 1
+
+                    if len(v_word) > 1:
+                        words.append(v_word)
+
+                # Iterates whichever direction is currently being checked
+                if direction == "HORIZONTAL":
+                    col += 1 - i*2
+                    row = int(tile / 100) - 10
+                else:
+                    row += 1 - i*2
+                    col = tile % 100 - 10
+
+            # Resets to the original tile and parse to the start
+            if not i:
+                if direction == "HORIZONTAL":
+                    row = int(tile / 100) - 10
+                    col = tile % 100 - 10 - 1
+                else:
+                    row = int(tile / 100) - 10 - 1
+                    col = tile % 100 - 10
+
+        # Add string to the list of words
+        if len(h_word) > 1:
+            words.append(h_word)
+
+        # Checks if each string in the list of words is a valid scrabble word
+        wordCheck = True
+        for word in words:
+            if [word.lower()] not in self.dictionary:
+                wordCheck = False
+
+        # Checks if all tests are passed that qualifies the play as a valid play
+        if touchCheck and wordCheck and not len(temp_list) and len(words):
+            self.Play.Enable()
+        else:
+            self.Play.Disable()
+
+
 class Scrab(wx.Frame):
     def __init__(self):
         super().__init__(parent=None, title='Scrabble', size=(600, 650))
         panel = wx.Panel(self)
-
-        # 15x15 Grid for Scrabble
-        self.scrab = wx.GridSizer(15, 15, 0, 0)
-        for i in range(0, 225):
-            self.scrab.Add(wx.Button(panel), 0, wx.EXPAND)
-        for children in self.scrab.GetChildren():
-            children.GetWindow().Bind(wx.EVT_BUTTON, self.btnScrab)
 
         # 7x1 Grid for Letter Rack
         self.rack = wx.GridSizer(1, 7, 0, 0)
@@ -43,6 +222,10 @@ class Scrab(wx.Frame):
         for children in self.rack.GetChildren():
             children.GetWindow().Bind(wx.EVT_BUTTON, self.pressrack)
             children.GetWindow().SetBackgroundColour("tan")
+
+        self.game = gameGrid(self, panel, 15, 15, "light blue")
+        self.mode = gameMode(self, panel)
+        self.restart = RS_Btn(self, panel)
 
         # 2nd Row (Rack, Shuffle, Play, and Solve Mode)
         row = wx.BoxSizer(wx.HORIZONTAL)
@@ -55,15 +238,6 @@ class Scrab(wx.Frame):
         self.Play.Bind(wx.EVT_ENTER_WINDOW, self.OnMouseEnter)
         self.Play.Bind(wx.EVT_LEAVE_WINDOW, self.OnMouseLeave)
 
-        # Allows user to choose which mode to play in
-        self.mode = wx.Choice(panel)
-        self.mode.Append("One Player")
-        self.mode.Append("Two Player")
-        self.mode.Append("Solve")
-        self.mode.SetSelection(0)
-        self.mode.Bind(wx.EVT_ENTER_WINDOW, self.OnMouseEnter)
-        self.mode.Bind(wx.EVT_LEAVE_WINDOW, self.OnMouseLeave)
-
         row.Add(self.rack, 1, wx.ALL | wx.EXPAND, 5)
         row.Add(self.Shuffle, 0, wx.ALL | wx.EXPAND, 5)
         row.Add(self.Play, 0, wx.ALL | wx.EXPAND, 5)
@@ -72,15 +246,9 @@ class Scrab(wx.Frame):
         # Disable Play button (Only gets enabled when a valid word is on the board)
         self.Play.Disable()
 
-        # Allows user to restart
-        self.restart = wx.Button(panel, label='Start Game')
-        self.restart.Bind(wx.EVT_BUTTON, self.pressRS)
-        self.restart.Bind(wx.EVT_ENTER_WINDOW, self.OnMouseEnter)
-        self.restart.Bind(wx.EVT_LEAVE_WINDOW, self.OnMouseLeave)
-
         # Adds all buttons to the frame
         settings = wx.BoxSizer(wx.VERTICAL)
-        settings.Add(self.scrab, 1, wx.ALL | wx.EXPAND, 5)
+        settings.Add(self.game.grid, 1, wx.ALL | wx.EXPAND, 5)
         settings.Add(row, 0, wx.ALL | wx.EXPAND, 5)
         settings.Add(self.restart, 0, wx.ALL | wx.EXPAND, 5)
         panel.SetSizer(settings)
@@ -93,102 +261,48 @@ class Scrab(wx.Frame):
         self.tiles_file = FromCSV("assets/CSV/Scrabble_Tiles.txt")
         self.dictionary = FromCSV("assets/CSV/Scrabble_Dictionary.txt")
 
-        # Populate the bag with all tiles
-        self.tiles = []
-        for i in range(0, 27):
-            for j in range(0, int(self.tiles_file[i][1])):
-                self.tiles.append(self.tiles_file[i][0])
-
-        # Create 2D array for board
-        self.Board = []
-
-        # Populates array
-        # The IDs of each button are set with a hash formula for easy access
-        i = 0
-        j = 0
-        Brow = []
-        for children in self.scrab.GetChildren():
-            children.GetWindow().SetId((i + 10) * 100 + (j + 10))
-            Brow.append("")
-            if j < 14:
-                j += 1
-            else:
-                self.Board.append(Brow)
-                Brow = []
-                j = 0
-                i += 1
-
-        # Fill board with multipliers
-        for i in range(0, 61):
-            self.Board[int(self.board_setup[i][0])][int(self.board_setup[i][1])] = self.board_setup[i][2]
-        for children in self.scrab.GetChildren():
-            children.GetWindow().SetLabel(
-                self.Board[int(children.GetWindow().GetId() / 100) - 10][children.GetWindow().GetId() % 100 - 10])
-            SetScrabColours(children.GetWindow())
-
-        # Initializes rack arrays
+        # Initializes variables
         self.rack_arr = []
         self.comp_rack_arr = []
-
-        # Who goes first is determined by chance
-        value = randint(0, 1)
-        for i in range(0, 2):
-
-            # Populates both racks with tiles from the bag randomly
-            # Sets ID of rack buttons to its index number
-            if i == value:
-                j = 0
-                for children in self.rack.GetChildren():
-                    tile = randint(0, len(self.tiles) - 1)
-                    children.GetWindow().SetLabel(self.tiles[tile])
-                    children.GetWindow().SetId(j)
-                    self.rack_arr.append(self.tiles[tile])
-                    del self.tiles[tile]
-                    j += 1
-            else:
-                for j in range(0, 7):
-                    tile = randint(0, len(self.tiles) - 1)
-                    self.comp_rack_arr.append(self.tiles[tile])
-                    del self.tiles[tile]
-
+        self.tiles = []
+        self.multipliers = []
+        self.new_tiles = []
         self.click = -1
+
+        resetGame(self)
 
     # Shuffles tiles in the rack
     def pressShuffle(self, event):
         self.click = -1
-        rack = []
-        for children in self.rack.GetChildren():
-            rack.append(children.GetWindow().GetLabel())
-        i = 0
-        for children in self.rack.GetChildren():
-            value = randint(0, len(rack) - 1)
-            children.GetWindow().SetLabel(rack[value])
-            if len(children.GetWindow().GetLabel()) == 1:
-                children.GetWindow().SetBackgroundColour("tan")
+        for i in range(len(self.rack_arr)):
+            value = randint(0, 7 - i - 1)
+
+            temp = self.rack_arr[i].GetLabel()
+            self.rack_arr[i].SetLabel(self.rack_arr[value].GetLabel())
+            self.rack_arr[value].SetLabel(temp)
+
+            if len(self.rack_arr[i].GetLabel()) == 1:
+                self.rack_arr[i].SetBackgroundColour("tan")
             else:
-                children.GetWindow().SetBackgroundColour("grey")
-            self.rack_arr[i] = rack[value]
-            del rack[value]
-            i += 1
+                self.rack_arr[i].SetBackgroundColour("grey")
 
     # Disables tiles of the board when a word is played
     # Fills rest of rack with random remaining tiles
     def pressPlay(self, event):
+
         self.click = -1
-        for children in self.scrab.GetChildren():
+        self.new_tiles = []
+
+        for children in self.game.grid.GetChildren():
             if len(children.GetWindow().GetLabel()) == 1 and children.GetWindow().IsEnabled():
-                self.Board[int(children.GetWindow().GetId() / 100) - 10][children.GetWindow().GetId() % 100 - 10] \
-                    = children.GetWindow().GetLabel()
                 children.GetWindow().Disable()
-        i = 0
+
         for children in self.rack.GetChildren():
             if children.GetWindow().GetLabel() == "" and len(self.tiles) > 0:
                 tile = randint(0, len(self.tiles) - 1)
                 children.GetWindow().SetLabel(self.tiles[tile])
                 children.GetWindow().SetBackgroundColour("tan")
-                self.rack_arr[i] = self.tiles[tile]
                 del self.tiles[tile]
-            i += 1
 
         # Disable Play button again after word has been played
         self.Play.Disable()
@@ -196,218 +310,55 @@ class Scrab(wx.Frame):
     # Resets board to the setup before the character is chosen
     def pressRS(self, event):
 
-        self.click = -1
-        self.tiles = []
-        for i in range(0, 27):
-            for j in range(0, int(self.tiles_file[i][1])):
-                self.tiles.append(self.tiles_file[i][0])
-
-        k = 0
-        for i in range(0, 15):
-            for j in range(0, 15):
-                if k < 61 and i == int(self.board_setup[k][0]) and j == int(self.board_setup[k][1]):
-                    self.Board[i][j] = self.board_setup[k][2]
-                    k += 1
-                else:
-                    self.Board[i][j] = ""
-
-        # Fill board with multipliers
-        for children in self.scrab.GetChildren():
-            children.GetWindow().Enable()
-            children.GetWindow().SetLabel(
-                self.Board[int(children.GetWindow().GetId() / 100) - 10][children.GetWindow().GetId() % 100 - 10])
-            SetScrabColours(children.GetWindow())
-
         if self.restart.GetLabel() == "Restart Game":
             self.restart.SetLabel("Start Game")
             self.mode.Enable()
 
-            # Who goes first is determined by chance
-            value = randint(0, 1)
-            for i in range(0, 2):
+            for rows in self.game.Board:
+                for cols in rows:
+                    cols.SetLabel("")
 
-                # Populates both racks with tiles from the bag randomly
-                if i == value:
-                    j = 0
-                    for children in self.rack.GetChildren():
-                        tile = randint(0, len(self.tiles) - 1)
-                        children.GetWindow().SetLabel(self.tiles[tile])
-                        children.GetWindow().SetBackgroundColour("tan")
-                        self.rack_arr[j] = self.tiles[tile]
-                        del self.tiles[tile]
-                        j += 1
-                else:
-                    for j in range(0, 7):
-                        tile = randint(0, len(self.tiles) - 1)
-                        self.comp_rack_arr[j] = self.tiles[tile]
-                        del self.tiles[tile]
+            resetGame(self)
 
         else:
             self.restart.SetLabel("Restart Game")
             self.mode.Disable()
+            self.Shuffle.Enable()
+            for children in self.rack:
+                children.GetWindow().Enable()
             print("You are now in " + self.mode.GetStringSelection() + " Mode")
 
     # Places the piece that was chosen onto an empty space on the board
-    def btnScrab(self, event):
+    def space(self, event):
 
-        # Places piece back on rack if its clicked while on the board
+        # Selects the chosen pieces and places it where the user clicks next (back on rack or different place on board)
         if len(event.GetEventObject().GetLabel()) == 1:
-            empty = False
-            i = 0
-            for children in self.rack.GetChildren():
-                if not empty:
-                    if children.GetWindow().GetLabel() == "":
-                        empty = True
-                        children.GetWindow().SetLabel(event.GetEventObject().GetLabel())
-                        children.GetWindow().SetBackgroundColour("tan")
-                        self.rack_arr[i] = event.GetEventObject().GetLabel()
-                i += 1
-            event.GetEventObject().SetLabel(self.Board[int(event.GetEventObject().GetId() / 100) - 10]
-                                            [event.GetEventObject().GetId() % 100 - 10])
-            SetScrabColours(event.GetEventObject())
-        elif self.click >= 0:
 
-            event.GetEventObject().SetLabel(self.rack_arr[self.click])
-            event.GetEventObject().SetBackgroundColour("tan")
+            self.click = event.GetEventObject().GetId()
 
-            i = 0
-            for children in self.rack.GetChildren():
-                if children.GetWindow().GetId() == self.click:
-                    children.GetWindow().SetLabel("")
-                    children.GetWindow().SetBackgroundColour("grey")
-                    self.rack_arr[i] = ""
-                i += 1
-            self.click = -1
+        elif self.click > -1:
 
-        # Check if new tiles on the board are in line
-        words = []
-        v_words = ["", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]
-        h_word = ""
-        rowIDs = []
-        colIDs = []
-        new_tiles = []
-        count_new = 0
-        tiles_between = 0
-        touchCheck = False
-        centerFilled = False
-        for children in self.scrab.GetChildren():
-            childRowID = int(children.GetWindow().GetId() / 100) - 10
-            childColID = children.GetWindow().GetId() % 100 - 10
-            if len(children.GetWindow().GetLabel()) == 1:
-                h_word += children.GetWindow().GetLabel()
-                v_words[childColID] += children.GetWindow().GetLabel()
-                if count_new > 0:
-                    tiles_between += 1
-                    rowIDs.append(childRowID)
-                    colIDs.append(childColID)
-                # Ends the word if the string goes until the end of the board
-                if childColID == 14:
-                    if len(h_word) > 1:
-                        words.append(h_word)
-                    h_word = ""
-                if childRowID == 14:
-                    if len(v_words[childColID]) > 1:
-                        words.append(v_words[childColID])
-                    v_words[childColID] = ""
-                if children.GetWindow().IsEnabled():
-                    if children.GetWindow().GetId() == 1717:
-                        centerFilled = True
-                    new_tiles.append(tiles_between)
-                    if count_new == 0:
-                        rowIDs.append(childRowID)
-                        colIDs.append(childColID)
-
-                    # Checks if any tile is touching an already played tile
-                    if len(self.Board[7][7]) == 1:  # Center box is always filled on the first move
-                        if childRowID < 14 and len(self.Board[childRowID + 1][childColID]) == 1:
-                            touchCheck = True
-                        if childRowID > 0 and len(self.Board[childRowID - 1][childColID]) == 1:
-                            touchCheck = True
-                        if childColID < 14 and len(self.Board[childRowID][childColID + 1]) == 1:
-                            touchCheck = True
-                        if childColID > 0 and len(self.Board[childRowID][childColID - 1]) == 1:
-                            touchCheck = True
-
-                    elif count_new > 0 and centerFilled:
-                        touchCheck = True
-
-                    count_new += 1
-            else:
-                if len(h_word) > 1:
-                    words.append(h_word)
-                if len(v_words[childColID]) > 1:
-                    words.append(v_words[childColID])
-                h_word = ""
-                v_words[childColID] = ""
-
-        # Checks if the played tiles are in line
-        check = True
-        if touchCheck:
-            if len(new_tiles) > 1:
-                direction = "NEITHER"
-                rowID = rowIDs[new_tiles[0]]
-                colID = colIDs[new_tiles[0]]
-                for item in new_tiles:
-                    if rowIDs[item] != rowID:
-                        check = False
-                if not check:
-                    check = True
-                    for item in new_tiles:
-                        if colIDs[item] != colID:
-                            check = False
-                    if check:
-                        direction = "VERTICAL"
-                else:
-                    direction = "HORIZONTAL"
-                if check:
-                    if direction == "HORIZONTAL":
-                        i = 1
-                        j = 1
-                        while i < new_tiles[-1] + 1:
-                            if rowIDs[i] == rowID:
-                                if colIDs[i] != colID + j:
-                                    check = False
-                                j += 1
-                            i += 1
-                    else:
-                        i = 1
-                        j = 1
-                        while i < new_tiles[-1] + 1:
-                            if colIDs[i] == colID:
-                                if rowIDs[i] != rowID + j:
-                                    check = False
-                                j += 1
-                            i += 1
-
-        # Checks if all played words are in the scrabble dictionary
-        wordCheck = True
-        for item in words:
-            if [item.lower()] not in self.dictionary:
-                wordCheck = False
-
-        if touchCheck and check and wordCheck:
-            self.Play.Enable()
-        else:
-            self.Play.Disable()
+            moveTile(self, event)
+            checkValidity(self, event)
 
     # Chooses a piece from the rack to place
     def pressrack(self, event):
         if event.GetEventObject().GetLabel() != "":
+
             self.click = event.GetEventObject().GetId()
-        else:
-            self.click = -1
+
+        elif self.click > -1:
+
+            moveTile(self, event)
+            checkValidity(self, event)
 
     def OnMouseEnter(self, event):
-        if event.GetEventObject() == self.mode:
-            self.StatusBar.SetStatusText("Choose a game mode")
-        elif event.GetEventObject() == self.restart:
-            self.StatusBar.SetStatusText("Start a new game")
-        elif event.GetEventObject() == self.Shuffle:
+        onHover(self, event)
+        if event.GetEventObject() == self.Shuffle:
             self.StatusBar.SetStatusText("Shuffle the tiles in your rack")
         elif event.GetEventObject() == self.Play:
             self.StatusBar.SetStatusText("Play the new word onto the board")
         event.Skip()
 
     def OnMouseLeave(self, event):
-        self.StatusBar.SetStatusText("")
-        event.Skip()
+        offHover(self, event)
