@@ -55,11 +55,12 @@ def FromCSV(file):
 
 
 # Sets up game grid
-def gameGrid(game, panel, ROWS, COLS, COLOUR):
+def gameGrid(game, panel, ROWS, COLS, COLOUR, gameName):
 
     # ROWSxCOLS Grid for the game
     game.grid = wx.GridSizer(ROWS, COLS, 0, 0)
     game.Board = []
+    game.Name = gameName
     for i in range(ROWS):
         row = []
         for j in range(COLS):
@@ -87,8 +88,11 @@ def gameGrid(game, panel, ROWS, COLS, COLOUR):
 def gameMode(game, panel):
     mode = wx.Choice(panel)
     mode.Append("One Player")
-    mode.Append("Two Player")
     mode.Append("Solve")
+
+    if game.Name != "Scrabble":
+        mode.Append("Two Player")
+
     mode.SetSelection(0)
     mode.Bind(wx.EVT_ENTER_WINDOW, game.OnMouseEnter)
     mode.Bind(wx.EVT_LEAVE_WINDOW, game.OnMouseLeave)
@@ -107,9 +111,9 @@ def RS_Btn(game, panel):
 
 
 # Sets up the layout of the games (Tic-Tac-Toe, Connect 4, Checkers, Chess)
-def gameLayout(game, panel, ROWS, COLS, COLOUR, P1, P2):
+def gameLayout(game, panel, ROWS, COLS, COLOUR, gameName, P1, P2):
 
-    game = gameGrid(game, panel, ROWS, COLS, COLOUR)
+    game = gameGrid(game, panel, ROWS, COLS, COLOUR, gameName)
 
     # Initialize user character
     game.User = ""
@@ -159,7 +163,7 @@ def resetGame(game):
         game.User = EnableGame(game.player, game.mode, game.restart, game.grid, game.player.GetStringSelection())
         print("You are now in " + game.mode.GetStringSelection() + " Mode")
 
-        if game.gameName == "Checkers" or game.gameName == "Chess":
+        if game.Name == "Checkers" or game.Name == "Chess":
 
             # Sets up the board with pieces
             for rows in range(len(game.Board)):

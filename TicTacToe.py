@@ -14,8 +14,7 @@ class TTT(wx.Frame):
         panel = wx.Panel(self)
 
         # Set up the game panel
-        self.game = gameLayout(self, panel, 3, 3, "white", "CIRCLE", "CROSS")
-        self.game.gameName = "TicTacToe"
+        self.game = gameLayout(self, panel, 3, 3, "white", "TicTacToe", "CIRCLE", "CROSS")
 
     def pressRS(self, event):
 

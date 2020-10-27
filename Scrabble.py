@@ -10,20 +10,62 @@ import wx
 from Games import FromCSV, onHover, offHover, gameMode, gameGrid, RS_Btn
 
 
+# Moves tiles from the rack or board to another spot on the rack or board
 # Enables or Disables the play button if the play on the board is valid
-def checkValidity(self, event):
+def moveTile(self, event):
 
-    # Updates the list of new tiles placed
+    # Condition if the user selected a piece from the rack
+    if len(str(self.click)) == 1:
+
+        previous_click = self.rack_arr[self.click]
+        self.rack_arr[self.click].SetBackgroundColour("grey")
+        multiplier = ""
+
+    # Condition if the user selected a piece from the board
+    else:
+        old_row = int(self.click / 100) - 10
+        old_col = self.click % 100 - 10
+
+        previous_click = self.game.Board[old_row][old_col]
+        multiplier = self.multipliers[old_row][old_col]
+
+        self.new_tiles.remove(self.click)
+
+    event.GetEventObject().SetName(previous_click.GetName())
+
+    # Open a dialog for the user to choose what they want to use the blank piece as
+    if event.GetEventObject().GetName()[:5] == "BLANK":
+
+        # Condition if the blank tile is selected from the rack
+        if len(str(self.click)) == 1:
+
+            # Only open dialog if it moves from the rack to the board
+            if len(str(event.GetEventObject().GetId())) > 1:
+                dlg = wx.TextEntryDialog(None, "Choose a letter")
+                dlg.ShowModal()
+                event.GetEventObject().SetName("BLANK_" + dlg.GetValue())
+                dlg.Destroy()
+
+        elif len(str(event.GetEventObject().GetId())) == 1:
+
+            # Set the tile back to blank when it is returned to the rack
+            event.GetEventObject().SetName("BLANK")
+
+    # Condition that a space on the board was clicked
     if len(str(event.GetEventObject().GetId())) > 1:
         self.new_tiles.append(event.GetEventObject().GetId())
 
-        if len(str(self.click)) > 1:
-            self.new_tiles.remove(self.click)
-
-    elif len(str(self.click)) > 1:
-        self.new_tiles.remove(self.click)
+    # Condition that a space on the rack was clicked
+    else:
+        event.GetEventObject().SetBitmap(wx.Image("assets/IMAGES/" + event.GetEventObject().GetName() + ".png",
+                                                  wx.BITMAP_TYPE_ANY).ConvertToBitmap())
 
     self.click = -1
+
+    event.GetEventObject().SetLabel("")
+    previous_click.SetName("button")
+    previous_click.SetBitmap(self.empty)
+    previous_click.SetLabel(multiplier)
 
     # Creates a temporary list to modify
     temp_list = list(self.new_tiles)
@@ -45,7 +87,7 @@ def checkValidity(self, event):
         # Creates word by concatenating all connected tiles
         h_word = ""
         for i in range(2):
-            while -1 < col < 15 and -1 < row < 15 and len(self.game.Board[row][col].GetName()) != 6:
+            while -1 < col < 15 and -1 < row < 15 and self.game.Board[row][col].GetName() != "button":
 
                 # Starts from first tile and parses to the end, then goes back and parses to the start
                 if i:
@@ -56,18 +98,21 @@ def checkValidity(self, event):
                 # Checks if at least one placed tile is touching a previously placed tile
                 if self.game.Board[row][col].IsEnabled():
 
-                    if row < 14 and not self.game.Board[row + 1][col].IsEnabled():
-                        touchCheck = True
-                    elif row > 0 and not self.game.Board[row - 1][col].IsEnabled():
-                        touchCheck = True
-                    elif col < 14 and not self.game.Board[row][col + 1].IsEnabled():
-                        touchCheck = True
-                    elif col > 0 and not self.game.Board[row][col - 1].IsEnabled():
-                        touchCheck = True
+                    # Only check if this test has not already passed
+                    if not touchCheck:
 
-                    # The centre piece must be filled on the first turn
-                    elif len(self.game.Board[7][7].GetName()[-1]) == 1 and self.game.Board[7][7].IsEnabled():
-                        touchCheck = True
+                        if row < 14 and not self.game.Board[row + 1][col].IsEnabled():
+                            touchCheck = True
+                        elif row > 0 and not self.game.Board[row - 1][col].IsEnabled():
+                            touchCheck = True
+                        elif col < 14 and not self.game.Board[row][col + 1].IsEnabled():
+                            touchCheck = True
+                        elif col > 0 and not self.game.Board[row][col - 1].IsEnabled():
+                            touchCheck = True
+
+                        # The centre piece must be filled on the first turn
+                        elif self.game.Board[7][7].GetName() != "button" and self.game.Board[7][7].IsEnabled():
+                            touchCheck = True
 
                     # Removes connected tiles so that duplicate parsing does not occur
                     temp_list.remove(self.game.Board[row][col].GetId())
@@ -75,7 +120,7 @@ def checkValidity(self, event):
                     # Checks the opposite direction for each newly placed tile
                     v_word = ""
                     for j in range(2):
-                        while -1 < col < 15 and -1 < row < 15 and len(self.game.Board[row][col].GetName()) != 6:
+                        while -1 < col < 15 and -1 < row < 15 and self.game.Board[row][col].GetName() != "button":
 
                             if j:
                                 v_word = self.game.Board[row][col].GetName()[-1] + v_word
@@ -126,64 +171,52 @@ def checkValidity(self, event):
         # Checks if all tests are passed that qualifies the play as a valid play
         if touchCheck and wordCheck and not len(temp_list) and len(words):
             self.Play.Enable()
+            for i in self.new_tiles:
+                tile = self.game.Board[int(i / 100) - 10][i % 100 - 10]
+                tile.SetBitmap(wx.Image("assets/IMAGES/GREEN_" + tile.GetName() + ".png", wx.BITMAP_TYPE_ANY)
+                               .ConvertToBitmap())
+
         else:
             self.Play.Disable()
+            for i in self.new_tiles:
+                tile = self.game.Board[int(i / 100) - 10][i % 100 - 10]
+                tile.SetBitmap(wx.Image("assets/IMAGES/RED_" + tile.GetName() + ".png", wx.BITMAP_TYPE_ANY)
+                               .ConvertToBitmap())
+
     else:
         self.Play.Disable()
-
-
-# Moves tiles from the rack or board to another spot on the rack or board
-def moveTile(self, event):
-
-    # Condition if the user selected a piece from the rack
-    if len(str(self.click)) == 1:
-
-        previous_click = self.rack_arr[self.click]
-        self.rack_arr[self.click].SetBackgroundColour("grey")
-
-    # Condition if the user selected a piece from the board
-    else:
-        old_row = int(self.click / 100) - 10
-        old_col = self.click % 100 - 10
-
-        previous_click = self.game.Board[old_row][old_col]
-        self.game.Board[old_row][old_col].SetLabel(self.multipliers[old_row][old_col])
-
-    event.GetEventObject().SetName(previous_click.GetName())
-
-    if event.GetEventObject().GetName()[:5] == "BLANK":
-        if len(str(self.click)) == 1:
-            if len(str(event.GetEventObject().GetId())) > 1:
-                dlg = wx.TextEntryDialog(None, "Choose a letter")
-                dlg.ShowModal()
-                event.GetEventObject().SetName("BLANK_" + dlg.GetValue())
-                dlg.Destroy()
-        elif len(str(event.GetEventObject().GetId())) == 1:
-            event.GetEventObject().SetName("BLANK")
-
-    event.GetEventObject().SetBitmap(wx.Image("assets/IMAGES/" + event.GetEventObject().GetName() + ".png",
-                                              wx.BITMAP_TYPE_ANY).ConvertToBitmap())
-    event.GetEventObject().SetLabel("")
-
-    previous_click.SetName("button")
-    previous_click.SetBitmap(self.empty)
-
-    return self
 
 
 # Resets the game board, racks, and tiles
 def resetGame(self):
 
-    # Fill board with multipliers
-    for i in range(0, 61):
-        self.game.Board[int(self.board_setup[i][0])][int(self.board_setup[i][1])].SetLabel(self.board_setup[i][2])
+    self.new_tiles = []
+    self.click = -1
 
     # Remove all tiles from the board
     for i in self.game.Board:
         for j in i:
-            j.Enable()
+            j.Disable()
             j.SetName("button")
             j.SetBitmap(self.empty)
+            j.SetBitmapDisabled(self.empty)
+
+    # Fill board with multipliers
+    for i in range(0, 61):
+
+        row = int(self.board_setup[i][0])
+        col = int(self.board_setup[i][1])
+
+        self.game.Board[row][col].SetLabel(self.multipliers[row][col])
+
+        if self.multipliers[row][col] == "3W":
+            self.game.Board[row][col].SetBackgroundColour("yellow")
+        elif self.multipliers[row][col] == "2W":
+            self.game.Board[row][col].SetBackgroundColour("red")
+        elif self.multipliers[row][col] == "3L":
+            self.game.Board[row][col].SetBackgroundColour("green")
+        elif self.multipliers[row][col] == "2L":
+            self.game.Board[row][col].SetBackgroundColour("blue")
 
     # Populate the bag with all tiles
     self.tiles = []
@@ -236,7 +269,7 @@ class Scrab(wx.Frame):
         for children in self.rack.GetChildren():
             children.GetWindow().Bind(wx.EVT_BUTTON, self.pressrack)
 
-        self.game = gameGrid(self, panel, 15, 15, "light blue")
+        self.game = gameGrid(self, panel, 15, 15, "light blue", "Scrabble")
         self.mode = gameMode(self, panel)
         self.restart = RS_Btn(self, panel)
 
@@ -283,15 +316,6 @@ class Scrab(wx.Frame):
 
             self.multipliers[row][col] = self.board_setup[i][2]
 
-            if self.multipliers[row][col] == "3W":
-                self.game.Board[row][col].SetBackgroundColour("yellow")
-            elif self.multipliers[row][col] == "2W":
-                self.game.Board[row][col].SetBackgroundColour("red")
-            elif self.multipliers[row][col] == "3L":
-                self.game.Board[row][col].SetBackgroundColour("green")
-            elif self.multipliers[row][col] == "2L":
-                self.game.Board[row][col].SetBackgroundColour("blue")
-
         # Initializes variables
         self.rack_arr = []
         self.comp_rack_arr = []
@@ -321,7 +345,7 @@ class Scrab(wx.Frame):
                 self.rack_arr[i].SetBackgroundColour("grey")
                 pic = self.empty
             else:
-                pic = wx.Image("assets/IMAGES/" + self.rack_arr[i].GetName() + ".png", wx.BITMAP_TYPE_ANY)\
+                pic = wx.Image("assets/IMAGES/" + self.rack_arr[i].GetName() + ".png", wx.BITMAP_TYPE_ANY) \
                     .ConvertToBitmap()
 
             self.rack_arr[i].SetBitmap(pic)
@@ -334,6 +358,8 @@ class Scrab(wx.Frame):
 
         for tiles in self.new_tiles:
             tile = self.game.Board[int(tiles / 100) - 10][tiles % 100 - 10]
+            tile.SetBackgroundColour("light blue")
+            tile.SetBitmap(wx.Image("assets/IMAGES/" + tile.GetName() + ".png", wx.BITMAP_TYPE_ANY).ConvertToBitmap())
             tile.SetBitmapDisabled(tile.GetBitmap())
             tile.Disable()
 
@@ -367,6 +393,9 @@ class Scrab(wx.Frame):
                 children.GetWindow().Enable()
             print("You are now in " + self.mode.GetStringSelection() + " Mode")
 
+            for children in self.game.grid:
+                children.GetWindow().Enable()
+
     # Places the piece that was chosen onto an empty space on the board
     def space(self, event):
 
@@ -378,7 +407,6 @@ class Scrab(wx.Frame):
         elif self.click > -1:
 
             moveTile(self, event)
-            checkValidity(self, event)
 
     # Chooses a piece from the rack to place
     def pressrack(self, event):
@@ -389,7 +417,6 @@ class Scrab(wx.Frame):
         elif self.click > -1:
 
             moveTile(self, event)
-            checkValidity(self, event)
 
     def OnMouseEnter(self, event):
         onHover(self, event)

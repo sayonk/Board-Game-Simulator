@@ -13,8 +13,7 @@ class C4(wx.Frame):
         panel = wx.Panel(self)
 
         # Set up the game panel
-        self.game = gameLayout(self, panel, 6, 7, "medium blue", "RED", "YELLOW")
-        self.game.gameName = "Connect4"
+        self.game = gameLayout(self, panel, 6, 7, "medium blue", "Connect4", "RED", "YELLOW")
 
     def pressRS(self, event):
 

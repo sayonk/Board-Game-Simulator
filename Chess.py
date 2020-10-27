@@ -105,8 +105,7 @@ class Chess(wx.Frame):
         panel = wx.Panel(self)
 
         # Set up the game panel
-        self.game = gameLayout(self, panel, 8, 8, "checkered", "WHITE", "BLACK")
-        self.game.gameName = "Chess"
+        self.game = gameLayout(self, panel, 8, 8, "checkered", "Chess", "WHITE", "BLACK")
 
         # Extract info for chess board from csv file
         self.board_setup = FromCSV("assets/CSV/Chess_Board.txt")
