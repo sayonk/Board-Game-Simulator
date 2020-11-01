@@ -10,11 +10,11 @@ from Games import PlacePiece, gameLayout, resetGame, onHover, offHover
 class TTT(wx.Frame):
 
     def __init__(self):
-        super().__init__(parent=None, title='Tic Tac Toe')
+        super().__init__(parent=None, title='Tic Tac Toe', style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER)
         panel = wx.Panel(self)
 
         # Set up the game panel
-        self.game = gameLayout(self, panel, 3, 3, "white", "TicTacToe", "CIRCLE", "CROSS")
+        self.game = gameLayout(self, panel, 3, 3, "white", "TicTacToe", "CIRCLE", "CROSS", 60)
 
     def pressRS(self, event):
 
@@ -23,7 +23,7 @@ class TTT(wx.Frame):
 
     # The button clicked is occupied by the User's character and is disabled
     def space(self, event):
-        PlacePiece("assets/IMAGES/", self.game.User, event.GetEventObject())
+        PlacePiece("assets/IMAGES/", self.game.User, event.GetEventObject(), self.game.size)
         event.GetEventObject().Disable()
 
     def OnMouseEnter(self, event):

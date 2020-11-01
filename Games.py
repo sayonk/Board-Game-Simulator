@@ -30,12 +30,12 @@ def DisableGame(C1, C2, RS, Grid):
 
 
 # Sets the button name and button bitmap accordingly when a piece is placed/moved
-def PlacePiece(folder, text, window):
+def PlacePiece(folder, text, window, size):
     if text == "button":
         pic = wx.Bitmap(1, 1)
         pic.SetMaskColour("black")
     else:
-        pic = wx.Image(folder + text + ".png", wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+        pic = wx.Image(folder + text + ".png", wx.BITMAP_TYPE_ANY).Scale(size, size).ConvertToBitmap()
     window.SetBitmap(pic)
     window.SetBitmapDisabled(pic)
     window.SetName(text)
@@ -61,6 +61,7 @@ def gameGrid(game, panel, ROWS, COLS, COLOUR, gameName):
     game.grid = wx.GridSizer(ROWS, COLS, 0, 0)
     game.Board = []
     game.Name = gameName
+
     for i in range(ROWS):
         row = []
         for j in range(COLS):
@@ -111,12 +112,13 @@ def RS_Btn(game, panel):
 
 
 # Sets up the layout of the games (Tic-Tac-Toe, Connect 4, Checkers, Chess)
-def gameLayout(game, panel, ROWS, COLS, COLOUR, gameName, P1, P2):
+def gameLayout(game, panel, ROWS, COLS, COLOUR, gameName, P1, P2, size):
 
     game = gameGrid(game, panel, ROWS, COLS, COLOUR, gameName)
 
     # Initialize user character
     game.User = ""
+    game.size = size
 
     # Allows user to choose which character to play as (O goes first, X goes second)
     game.player = wx.Choice(panel)
@@ -156,7 +158,7 @@ def resetGame(game):
 
         # Remove all pieces from the board
         for children in game.grid.GetChildren():
-            PlacePiece("", "button", children.GetWindow())
+            PlacePiece("", "button", children.GetWindow(), game.size)
 
     # Enables grid and restart buttons when a character is chosen
     else:
@@ -168,13 +170,13 @@ def resetGame(game):
             # Sets up the board with pieces
             for rows in range(len(game.Board)):
                 for cols in range(len(game.Board[rows])):
-                    PlacePiece("assets/IMAGES/", game.Board[rows][cols].GetName(), game.Board[rows][cols])
+                    PlacePiece("assets/IMAGES/", game.Board[rows][cols].GetName(), game.Board[rows][cols], game.size)
 
         else:
 
             # Remove all pieces from the board
             for children in game.grid.GetChildren():
-                PlacePiece("", "button", children.GetWindow())
+                PlacePiece("", "button", children.GetWindow(), game.size)
 
 
 # Describe buttons on hover

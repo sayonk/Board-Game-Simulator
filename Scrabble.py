@@ -13,7 +13,6 @@ from Games import FromCSV, onHover, offHover, gameMode, gameGrid, RS_Btn
 # Moves tiles from the rack or board to another spot on the rack or board
 # Enables or Disables the play button if the play on the board is valid
 def moveTile(self, event):
-
     # Condition if the user selected a piece from the rack
     if len(str(self.click)) == 1:
 
@@ -59,7 +58,8 @@ def moveTile(self, event):
     # Condition that a space on the rack was clicked
     else:
         event.GetEventObject().SetBitmap(wx.Image("assets/IMAGES/" + event.GetEventObject().GetName() + ".png",
-                                                  wx.BITMAP_TYPE_ANY).ConvertToBitmap())
+                                                  wx.BITMAP_TYPE_ANY).Scale(self.size, self.size)
+                                         .ConvertToBitmap())
 
     self.click = -1
 
@@ -216,7 +216,7 @@ def moveTile(self, event):
         for word in words:
             if [word.lower()] not in self.dictionary:
                 wordCheck = False
-        print(words)
+
         # Checks if all tests are passed that qualifies the play as a valid play
         if touchCheck and wordCheck and not len(temp_list) and len(words):
 
@@ -224,7 +224,7 @@ def moveTile(self, event):
             for i in self.new_tiles:
                 tile = self.game.Board[int(i / 100) - 10][i % 100 - 10]
                 tile.SetBitmap(wx.Image("assets/IMAGES/GREEN_" + tile.GetName() + ".png", wx.BITMAP_TYPE_ANY)
-                               .ConvertToBitmap())
+                               .Scale(self.size, self.size).ConvertToBitmap())
 
             points = 0
 
@@ -257,7 +257,7 @@ def moveTile(self, event):
             for i in self.new_tiles:
                 tile = self.game.Board[int(i / 100) - 10][i % 100 - 10]
                 tile.SetBitmap(wx.Image("assets/IMAGES/RED_" + tile.GetName() + ".png", wx.BITMAP_TYPE_ANY)
-                               .ConvertToBitmap())
+                               .Scale(self.size, self.size).ConvertToBitmap())
 
     else:
         self.Play.Disable()
@@ -267,7 +267,6 @@ def moveTile(self, event):
 
 # Resets the game board, racks, and tiles
 def resetGame(self):
-
     self.new_tiles = []
     self.click = -1
     self.trade = False
@@ -318,7 +317,8 @@ def resetGame(self):
                 tile = randint(0, len(self.tiles) - 1)
                 children.GetWindow().SetName(self.tiles[tile])
                 children.GetWindow().SetBitmap(wx.Image("assets/IMAGES/" + self.tiles[tile] + ".png",
-                                                        wx.BITMAP_TYPE_ANY).ConvertToBitmap())
+                                                        wx.BITMAP_TYPE_ANY).Scale(self.size, self.size)
+                                               .ConvertToBitmap())
                 children.GetWindow().SetBitmapDisabled(children.GetWindow().GetBitmap())
                 children.GetWindow().SetId(j)
                 self.rack_arr.append(children.GetWindow())
@@ -344,13 +344,16 @@ def resetGame(self):
 
 class Scrab(wx.Frame):
     def __init__(self):
-        super().__init__(parent=None, title='Scrabble', size=(600, 650))
+        super().__init__(parent=None, title='Scrabble', size=(600, 650),
+                         style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER)
         panel = wx.Panel(self)
+
+        self.size = 30
 
         # 7x1 Grid for Letter Rack
         self.rack = wx.GridSizer(1, 7, 0, 0)
         for i in range(7):
-            self.rack.Add(wx.Button(panel), 0, wx.EXPAND)
+            self.rack.Add(wx.Button(panel), 0, wx.RIGHT | wx.LEFT | wx.EXPAND, 3)
         for children in self.rack.GetChildren():
             children.GetWindow().Bind(wx.EVT_BUTTON, self.pressrack)
 
@@ -396,7 +399,7 @@ class Scrab(wx.Frame):
         self.Points.Bind(wx.EVT_ENTER_WINDOW, self.OnMouseEnter)
         self.Points.Bind(wx.EVT_LEAVE_WINDOW, self.OnMouseLeave)
 
-        row3.Add(self.rack, 1, wx.ALL | wx.EXPAND, 5)
+        row3.Add(self.rack, 1, wx.RIGHT | wx.LEFT | wx.EXPAND, 5)
         row3.Add(self.Points, 0, wx.ALL | wx.EXPAND, 10)
         row3.Add(self.Play, 0, wx.ALL | wx.EXPAND, 5)
         row3.Add(self.mode, 0, wx.ALL | wx.EXPAND, 5)
@@ -419,7 +422,6 @@ class Scrab(wx.Frame):
         # Fill board with multipliers
         self.multipliers = [[""] * 15 for i in range(15)]
         for i in range(61):
-
             row = int(self.board_setup[i][0])
             col = int(self.board_setup[i][1])
 
@@ -458,7 +460,7 @@ class Scrab(wx.Frame):
                 pic = self.empty
             else:
                 pic = wx.Image("assets/IMAGES/" + self.rack_arr[i].GetName() + ".png", wx.BITMAP_TYPE_ANY) \
-                    .ConvertToBitmap()
+                    .Scale(self.size, self.size).ConvertToBitmap()
 
             self.rack_arr[i].SetBitmap(pic)
 
@@ -470,7 +472,8 @@ class Scrab(wx.Frame):
         if self.trade:
 
             for i in self.trade_tiles:
-                i.SetBitmap(wx.Image("assets/IMAGES/" + i.GetName() + ".png", wx.BITMAP_TYPE_ANY).ConvertToBitmap())
+                i.SetBitmap(wx.Image("assets/IMAGES/" + i.GetName() + ".png", wx.BITMAP_TYPE_ANY)
+                            .Scale(self.size, self.size).ConvertToBitmap())
 
             for children in self.game.grid.GetChildren():
                 if children.GetWindow().GetName() == "button":
@@ -502,7 +505,8 @@ class Scrab(wx.Frame):
                 if self.rack_arr[i].GetName()[:5] == "BLANK":
                     self.rack_arr[i].SetName("BLANK")
                 self.rack_arr[i].SetBitmap(wx.Image("assets/IMAGES/" + self.rack_arr[i].GetName() + ".png",
-                                                          wx.BITMAP_TYPE_ANY).ConvertToBitmap())
+                                                    wx.BITMAP_TYPE_ANY).Scale(self.size,
+                                                                              self.size).ConvertToBitmap())
                 self.click = -1
 
                 board_space.SetName("button")
@@ -545,7 +549,7 @@ class Scrab(wx.Frame):
                 tile = randint(0, len(self.tiles) - 1)
                 i.SetName(self.tiles[tile])
                 i.SetBitmap(wx.Image("assets/IMAGES/" + self.tiles[tile] + ".png",
-                                     wx.BITMAP_TYPE_ANY).ConvertToBitmap())
+                                     wx.BITMAP_TYPE_ANY).Scale(self.size, self.size).ConvertToBitmap())
                 del self.tiles[tile]
 
             for i in tileNames:
@@ -565,7 +569,7 @@ class Scrab(wx.Frame):
     def pressPlay(self, event):
 
         # Adds current score to total score
-        self.PlayerScore.SetLabel(str(int(self.PlayerScore.GetLabel())+int(self.Points.GetLabel())))
+        self.PlayerScore.SetLabel(str(int(self.PlayerScore.GetLabel()) + int(self.Points.GetLabel())))
         self.Points.SetLabel('0')
 
         self.click = -1
@@ -573,7 +577,8 @@ class Scrab(wx.Frame):
         for tiles in self.new_tiles:
             tile = self.game.Board[int(tiles / 100) - 10][tiles % 100 - 10]
             tile.SetBackgroundColour("light blue")
-            tile.SetBitmap(wx.Image("assets/IMAGES/" + tile.GetName() + ".png", wx.BITMAP_TYPE_ANY).ConvertToBitmap())
+            tile.SetBitmap(wx.Image("assets/IMAGES/" + tile.GetName() + ".png", wx.BITMAP_TYPE_ANY)
+                           .Scale(self.size, self.size).ConvertToBitmap())
             tile.SetBitmapDisabled(tile.GetBitmap())
             tile.Disable()
 
@@ -585,7 +590,8 @@ class Scrab(wx.Frame):
                 tile = randint(0, len(self.tiles) - 1)
                 children.GetWindow().SetName(self.tiles[tile])
                 children.GetWindow().SetBitmap(wx.Image("assets/IMAGES/" + self.tiles[tile] + ".png",
-                                                        wx.BITMAP_TYPE_ANY).ConvertToBitmap())
+                                                        wx.BITMAP_TYPE_ANY).Scale(self.size, self.size)
+                                               .ConvertToBitmap())
                 del self.tiles[tile]
 
         if len(self.tiles) < 7:
@@ -646,11 +652,13 @@ class Scrab(wx.Frame):
 
                 if event.GetEventObject() in self.trade_tiles:
                     event.GetEventObject().SetBitmap(wx.Image("assets/IMAGES/" + event.GetEventObject().GetName() +
-                                                              ".png", wx.BITMAP_TYPE_ANY).ConvertToBitmap())
+                                                              ".png", wx.BITMAP_TYPE_ANY)
+                                                     .Scale(self.size, self.size).ConvertToBitmap())
                     self.trade_tiles.remove(event.GetEventObject())
                 else:
-                    event.GetEventObject().SetBitmap(wx.Image("assets/IMAGES/GREEN_" + event.GetEventObject().GetName() +
-                                                              ".png", wx.BITMAP_TYPE_ANY).ConvertToBitmap())
+                    event.GetEventObject().SetBitmap(
+                        wx.Image("assets/IMAGES/GREEN_" + event.GetEventObject().GetName() +
+                                 ".png", wx.BITMAP_TYPE_ANY).Scale(self.size, self.size).ConvertToBitmap())
                     self.trade_tiles.append(event.GetEventObject())
 
                 if len(self.trade_tiles):

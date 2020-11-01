@@ -101,11 +101,11 @@ def showMoves(self, event, rowID, colID):
 
 class Chess(wx.Frame):
     def __init__(self):
-        super().__init__(parent=None, title='Chess', size=(500, 550))
+        super().__init__(parent=None, title='Chess', size=(500, 550), style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER)
         panel = wx.Panel(self)
 
         # Set up the game panel
-        self.game = gameLayout(self, panel, 8, 8, "checkered", "Chess", "WHITE", "BLACK")
+        self.game = gameLayout(self, panel, 8, 8, "checkered", "Chess", "WHITE", "BLACK", 50)
 
         # Extract info for chess board from csv file
         self.board_setup = FromCSV("assets/CSV/Chess_Board.txt")
