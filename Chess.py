@@ -30,11 +30,44 @@ def gameOver(self):
     if isCheck(self, opp, self.king, [], False):
         self.game.Board[self.king[0]][self.king[1]].SetBackgroundColour("red")
 
-    draw = False
-    for i in self.draw_scenarios:
-        if sorted(self.pieces) == i:
-            draw = True
-            break
+    # Check for 50 move draw
+    if self.moves == 50:
+        draw = True
+    else:
+        draw = False
+
+    # Check for threefold repetition
+    if not draw:
+        position = positionToString(self)
+        if position in self.board_positions:
+            if position in self.board_positions2:
+                draw = True
+            else:
+                self.board_positions2.append(position)
+        else:
+            self.board_positions.append(position)
+
+    # Check for insufficient material
+    if not draw:
+        sameColourBishops = True
+        for i in self.draw_scenarios:
+            if sorted(self.pieces) == i:
+                if len(i) == 4 and sameColourBishops:
+                    first_bishop = ""
+                    for j in range(8):
+                        for k in range(8):
+                            if self.game.Board[j][k].GetName()[6:] == "BISHOP":
+                                if first_bishop == "":
+                                    first_bishop = self.game.Board[j][k].GetBackgroundColour()
+                                else:
+                                    if self.game.Board[j][k].GetBackgroundColour() == first_bishop:
+                                        draw = True
+                                    else:
+                                        sameColourBishops = False
+                                    break
+                else:
+                    draw = True
+                    break
 
     if not draw:
         getAllMoves(self)
@@ -51,103 +84,16 @@ def gameOver(self):
         return "None"
 
 
-# Gets an array of valid chess moves given the location of the piece chosen
-def getValidChessMoves(self, row, col):
-    arr = []
-    piece = self.game.Board[row][col].GetName()[6:]
+# Convert the board position to a string
+def positionToString(self):
 
-    if self.game.player.GetStringSelection() == self.game.User:
-        opp = -1
-    else:
-        opp = 1
+    position = ""
 
-    if piece == "PAWN" or piece == "KNIGHT":
+    for i in range(8):
+        for j in range(8):
+            position += self.game.Board[i][j].GetName()
 
-        arr = pawnAndKnightMoves(self, piece, row, col, opp, arr, False)
-
-    # Checks every spot where the piece can go based on their abilities
-    else:
-        if piece == "BISHOP" or piece == "ROOK":
-            rng = 4
-        else:
-            rng = 8
-        for i in range(rng):
-
-            # Set formulas for each piece's abilities that can be calculated from the index number of the loop
-            if piece == "BISHOP":
-                rowP = -2 * (i % 2) + 1
-                colP = -2 * int(i / 2) + 1
-            elif piece == "ROOK":
-                rowP = (i % 2) * (i - 2)
-                colP = (1 - i % 2) * (i - 1)
-            elif piece == "QUEEN" or piece == "KING":
-                rowP = (-2 * (i % 2) + 1) * int(bool(i % 7))
-                colP = int((i + 3) / 2) - 3 - int((int((i + 3) / 2) - 3) / 2)
-            else:
-                # If an empty space is chosen, there should be no valid spaces that are added to the list
-                rowP = 8
-                colP = 8
-
-            arr = getFullPath(self, opp, row, col, rowP, colP, piece, arr, False)
-
-    return arr
-
-
-# Add the move to the array if it is possible
-def addMove(self, opp, piece, spot, move, arr):
-    if not isCheck(self, opp, piece, spot, move):
-        arr.append(spot)
-
-    return arr
-
-
-# Get moves for the pawn and the knight
-def pawnAndKnightMoves(self, piece, row, col, opp, arr, checking):
-    check = False
-
-    # If the pawn hasn't moved, it can move 2 up, otherwise only 1 up
-    if piece == "PAWN" or checking:
-        if not checking and 0 <= row + opp <= 7 and self.game.Board[row + opp][col].GetName() == "button":
-            arr = addMove(self, opp, [row, col], [row + opp, col], True, arr)
-
-        for i in range(2):
-            if 0 <= col + 1 - 2 * i <= 7 and 0 <= row + opp <= 7 and \
-                    self.game.Board[row + opp][col + 1 - 2 * i].GetName()[:5] == self.game.Opp:
-                if checking:
-                    if self.game.Board[row + opp][col + 1 - 2 * i].GetName()[6:] == "PAWN":
-                        check = True
-
-                else:
-                    arr = addMove(self, opp, [row, col], [row + opp, col + 1 - 2 * i], True, arr)
-
-        if not checking and row == opp + 7 * (1 - opp) / 2 and self.game.Board[row + opp][col].GetName() == "button" \
-                and self.game.Board[row + 2 * opp][col].GetName() == "button":
-            arr = addMove(self, opp, [row, col], [row + 2 * opp, col], True, arr)
-
-        if not checking and len(self.poisson):
-            for i in range(2):
-                if 0 <= col + 1 - 2 * i <= 7 and [row, col + 1 - 2 * i] == self.poisson:
-                    arr = addMove(self, opp, [row, col], [row + opp, col + 1 - 2 * i], True, arr)
-
-    # Checks each spot where the knight is an 'L shape' away from
-    if piece == "KNIGHT" or checking:
-        for i in range(8):
-            rowK = (-2 * (int(i / 2) % 2) + 1) * (i % 2 + 1)
-            colK = ((i + 1) % 2 + 1) * (1 - 2 * int(i / 4))
-
-            if 0 <= row + rowK <= 7 and 0 <= col + colK <= 7:
-                if checking:
-                    if self.game.Board[row + int(rowK)][col + int(colK)].GetName()[6:] == "KNIGHT" and \
-                            self.game.Board[row + int(rowK)][col + int(colK)].GetName()[:5] == self.game.Opp:
-                        check = True
-
-                elif self.game.Board[row + int(rowK)][col + int(colK)].GetName()[:5] != self.game.User:
-                    arr = addMove(self, opp, [row, col], [row + int(rowK), col + int(colK)], True, arr)
-
-    if checking:
-        return check
-    else:
-        return arr
+    return position
 
 
 # Check if the king is in check given a possible move
@@ -216,6 +162,14 @@ def isCheck(self, opp, piece, spot, move):
     return check
 
 
+# Add the move to the array if it is possible
+def addMove(self, opp, piece, spot, move, arr):
+    if not isCheck(self, opp, piece, spot, move):
+        arr.append(spot)
+
+    return arr
+
+
 # Get the full path of a bishop, rook, queen, or king
 def getFullPath(self, opp, row, col, rowP, colP, piece, arr, checking):
     check = False
@@ -233,7 +187,9 @@ def getFullPath(self, opp, row, col, rowP, colP, piece, arr, checking):
                 blocked = True
 
                 if checking and self.game.Board[row + int(rowP)][col + int(colP)].GetName()[6:] == piece or \
-                        self.game.Board[row + int(rowP)][col + int(colP)].GetName()[6:] == "QUEEN":
+                        self.game.Board[row + int(rowP)][col + int(colP)].GetName()[6:] == "QUEEN" or \
+                        (self.game.Board[row + int(rowP)][col + int(colP)].GetName()[6:] == "KING" and
+                         -1 <= int(rowP) <= 1 and -1 <= int(colP) <= 1):
                     check = True
 
         else:
@@ -246,32 +202,122 @@ def getFullPath(self, opp, row, col, rowP, colP, piece, arr, checking):
             blocked = True
 
             # Check if castling is possible
-            if opp == -1:
-                if self.UserK_castle and not isCheck(self, opp, self.king, [7, self.C_col[0]], False) and not \
-                        isCheck(self, opp, self.king, [7, self.C_col[1]], False):
-                    arr.append([7, self.C_col[2]])
+            if self.game.Board[self.king[0]][self.king[1]].GetBackgroundColour() != "red":
+                if opp == -1:
+                    if self.UserK_castle and not isCheck(self, opp, self.king, [7, self.C_col[0]], False) and not \
+                            isCheck(self, opp, self.king, [7, self.C_col[1]], False):
+                        arr.append([7, self.C_col[2]])
 
-                if self.UserQ_castle and not isCheck(self, opp, self.king, [7, self.C_col[3]], False) and not \
-                        isCheck(self, opp, self.king, [7, self.C_col[4]], False) and not isCheck(self, opp, self.king,
-                                                                                                 [7, self.C_col[5]],
-                                                                                                 False):
-                    arr.append([7, self.C_col[4]])
+                    if self.UserQ_castle and not isCheck(self, opp, self.king, [7, self.C_col[3]], False) and not \
+                            isCheck(self, opp, self.king, [7, self.C_col[4]], False) and not \
+                            isCheck(self, opp, self.king, [7, self.C_col[5]], False):
+                        arr.append([7, self.C_col[4]])
 
-            else:
-                if self.OppK_castle and not isCheck(self, opp, self.king, [0, self.C_col[0]], False) and not \
-                        isCheck(self, opp, self.king, [0, self.C_col[1]], False):
-                    arr.append([0, self.C_col[2]])
+                else:
+                    if self.OppK_castle and not isCheck(self, opp, self.king, [0, self.C_col[0]], False) and not \
+                            isCheck(self, opp, self.king, [0, self.C_col[1]], False):
+                        arr.append([0, self.C_col[2]])
 
-                if self.OppQ_castle and not isCheck(self, opp, self.king, [0, self.C_col[3]], False) and not \
-                        isCheck(self, opp, self.king, [0, self.C_col[4]], False) and not isCheck(self, opp, self.king,
-                                                                                                 [0, self.C_col[5]],
-                                                                                                 False):
-                    arr.append([0, self.C_col[4]])
+                    if self.OppQ_castle and not isCheck(self, opp, self.king, [0, self.C_col[3]], False) and not \
+                            isCheck(self, opp, self.king, [0, self.C_col[4]], False) and not \
+                            isCheck(self, opp, self.king, [0, self.C_col[5]], False):
+                        arr.append([0, self.C_col[4]])
 
     if checking:
         return check
     else:
         return arr
+
+
+# Get moves for the pawn and the knight
+def pawnAndKnightMoves(self, piece, row, col, opp, arr, checking):
+    check = False
+
+    # If the pawn hasn't moved, it can move 2 up, otherwise only 1 up
+    if piece == "PAWN" or checking:
+        if not checking and 0 <= row + opp <= 7 and self.game.Board[row + opp][col].GetName() == "button":
+            arr = addMove(self, opp, [row, col], [row + opp, col], True, arr)
+
+        for i in range(2):
+            if 0 <= col + 1 - 2 * i <= 7 and 0 <= row + opp <= 7 and \
+                    self.game.Board[row + opp][col + 1 - 2 * i].GetName()[:5] == self.game.Opp:
+                if checking:
+                    if self.game.Board[row + opp][col + 1 - 2 * i].GetName()[6:] == "PAWN":
+                        check = True
+
+                else:
+                    arr = addMove(self, opp, [row, col], [row + opp, col + 1 - 2 * i], True, arr)
+
+        if not checking and row == opp + 7 * (1 - opp) / 2 and self.game.Board[row + opp][col].GetName() == "button" \
+                and self.game.Board[row + 2 * opp][col].GetName() == "button":
+            arr = addMove(self, opp, [row, col], [row + 2 * opp, col], True, arr)
+
+        if not checking and len(self.poisson):
+            for i in range(2):
+                if 0 <= col + 1 - 2 * i <= 7 and [row, col + 1 - 2 * i] == self.poisson:
+                    arr = addMove(self, opp, [row, col], [row + opp, col + 1 - 2 * i], True, arr)
+
+    # Checks each spot where the knight is an 'L shape' away from
+    if piece == "KNIGHT" or checking:
+        for i in range(8):
+            rowK = (-2 * (int(i / 2) % 2) + 1) * (i % 2 + 1)
+            colK = ((i + 1) % 2 + 1) * (1 - 2 * int(i / 4))
+
+            if 0 <= row + rowK <= 7 and 0 <= col + colK <= 7:
+                if checking:
+                    if self.game.Board[row + int(rowK)][col + int(colK)].GetName()[6:] == "KNIGHT" and \
+                            self.game.Board[row + int(rowK)][col + int(colK)].GetName()[:5] == self.game.Opp:
+                        check = True
+
+                elif self.game.Board[row + int(rowK)][col + int(colK)].GetName()[:5] != self.game.User:
+                    arr = addMove(self, opp, [row, col], [row + int(rowK), col + int(colK)], True, arr)
+
+    if checking:
+        return check
+    else:
+        return arr
+
+
+# Gets an array of valid chess moves given the location of the piece chosen
+def getValidChessMoves(self, row, col):
+    arr = []
+    piece = self.game.Board[row][col].GetName()[6:]
+
+    if self.game.player.GetStringSelection() == self.game.User:
+        opp = -1
+    else:
+        opp = 1
+
+    if piece == "PAWN" or piece == "KNIGHT":
+
+        arr = pawnAndKnightMoves(self, piece, row, col, opp, arr, False)
+
+    # Checks every spot where the piece can go based on their abilities
+    else:
+        if piece == "BISHOP" or piece == "ROOK":
+            rng = 4
+        else:
+            rng = 8
+        for i in range(rng):
+
+            # Set formulas for each piece's abilities that can be calculated from the index number of the loop
+            if piece == "BISHOP":
+                rowP = -2 * (i % 2) + 1
+                colP = -2 * int(i / 2) + 1
+            elif piece == "ROOK":
+                rowP = (i % 2) * (i - 2)
+                colP = (1 - i % 2) * (i - 1)
+            elif piece == "QUEEN" or piece == "KING":
+                rowP = (-2 * (i % 2) + 1) * int(bool(i % 7))
+                colP = int((i + 3) / 2) - 3 - int((int((i + 3) / 2) - 3) / 2)
+            else:
+                # If an empty space is chosen, there should be no valid spaces that are added to the list
+                rowP = 8
+                colP = 8
+
+            arr = getFullPath(self, opp, row, col, rowP, colP, piece, arr, False)
+
+    return arr
 
 
 # Fill list of board spaces with lists of valid moves
@@ -302,12 +348,15 @@ class Chess(wx.Frame):
         self.board_setup = FromCSV("assets/CSV/Chess_Board.txt")
 
         self.click = 0
+        self.moves = 0
         self.allMoves = [[[] for i in range(8)] for j in range(8)]
         self.fSpots = []
         self.C_col = []
         self.poisson = []
         self.king = [0, 0]
         self.pieces = []
+        self.board_positions = []
+        self.board_positions2 = []
         self.gameOver = False
         self.UserK_castle = True
         self.UserQ_castle = True
@@ -318,13 +367,14 @@ class Chess(wx.Frame):
                                ["BLACK_BISHOP", "BLACK_KING", "WHITE_KING"],
                                ["BLACK_KING", "WHITE_KING", "WHITE_KNIGHT"],
                                ["BLACK_KING", "BLACK_KNIGHT", "WHITE_KING"],
-                               ["BLACK_BISHOP", "BLACK_KING", "WHITE_BISHOP", "WHITE_KING"],
-                               ["BLACK_KING", "BLACK_KNIGHT", "WHITE_KING", "WHITE_KNIGHT"]]
+                               ["BLACK_BISHOP", "BLACK_KING", "WHITE_BISHOP", "WHITE_KING"]]
 
     def pressRS(self, event):
 
         # Resets board to the setup before the character is chosen
         if self.game.restart.GetLabel() == "Start Game":
+
+            self.pieces = []
 
             # Places pieces on the board based on which colour the user chooses
             for i in range(32):
@@ -352,13 +402,16 @@ class Chess(wx.Frame):
 
             getAllMoves(self)
 
-        self.click = 0
-        self.fSpots = []
-        self.poisson = []
-        self.UserK_castle = True
-        self.UserQ_castle = True
-        self.OppK_castle = True
-        self.OppQ_castle = True
+            self.click = 0
+            self.moves = 0
+            self.fSpots = []
+            self.poisson = []
+            self.board_positions = [positionToString(self)]
+            self.board_positions2 = []
+            self.UserK_castle = True
+            self.UserQ_castle = True
+            self.OppK_castle = True
+            self.OppQ_castle = True
 
     # Places selected piece to where the user clicks next
     def space(self, event):
@@ -378,6 +431,8 @@ class Chess(wx.Frame):
         # A new piece can be chosen to be moved by clicking on it
         else:
 
+            self.moves += 0.5
+
             row_click = getRow(self.click)
             col_click = getCol(self.click)
 
@@ -385,39 +440,42 @@ class Chess(wx.Frame):
 
             if [rowID, colID] in self.allMoves[row_click][col_click]:
 
-                # Set castle boolean to False if one of the pieces are moved
-                if self.UserK_castle and self.king[0] == 7 and \
-                        (self.game.Board[row_click][col_click].GetName()[6:] == "KING" or
-                         (self.game.Board[row_click][col_click].GetName()[6:] == "ROOK" and self.king[1] == 3 and
-                          col_click == 0) or (self.game.Board[row_click][col_click].GetName()[6:] == "ROOK" and
-                                              self.king[1] == 4 and col_click == 1)):
-                    self.UserK_castle = False
-
-                if self.UserQ_castle and self.king[0] == 7 and \
-                        (self.game.Board[row_click][col_click].GetName()[6:] == "KING" or
-                         (self.game.Board[row_click][col_click].GetName()[6:] == "ROOK" and self.king[1] == 4 and
-                          col_click == 0) or (self.game.Board[row_click][col_click].GetName()[6:] == "ROOK" and
-                                              self.king[1] == 3 and col_click == 1)):
-                    self.UserQ_castle = False
-
-                if self.OppK_castle and self.king[0] == 0 and \
-                        (self.game.Board[row_click][col_click].GetName()[6:] == "KING" or
-                         (self.game.Board[row_click][col_click].GetName()[6:] == "ROOK" and self.king[1] == 3 and
-                          col_click == 0) or (self.game.Board[row_click][col_click].GetName()[6:] == "ROOK" and
-                                              self.king[1] == 4 and col_click == 1)):
-                    self.OppK_castle = False
-
-                if self.OppQ_castle and self.king[0] == 0 and \
-                        (self.game.Board[row_click][col_click].GetName()[6:] == "KING" or
-                         (self.game.Board[row_click][col_click].GetName()[6:] == "ROOK" and self.king[1] == 4 and
-                          col_click == 0) or (self.game.Board[row_click][col_click].GetName()[6:] == "ROOK" and
-                                              self.king[1] == 3 and col_click == 1)):
-                    self.OppQ_castle = False
-
                 pawnGraduate = False
 
+                # Set castle boolean to False if one of the pieces are moved
+                if self.game.Board[row_click][col_click].GetName()[6:] == "ROOK":
+                    if col_click == 7:
+                        if self.king[0] == 7:
+                            if self.king[1] == 4:
+                                self.UserK_castle = False
+                            else:
+                                self.UserQ_castle = False
+                        else:
+                            if self.king[1] == 4:
+                                self.OppK_castle = False
+                            else:
+                                self.OppQ_castle = False
+                    else:
+                        if self.king[0] == 7:
+                            if self.king[1] == 4:
+                                self.UserQ_castle = False
+                            else:
+                                self.UserK_castle = False
+                        else:
+                            if self.king[1] == 4:
+                                self.OppQ_castle = False
+                            else:
+                                self.OppK_castle = False
+
                 # Move the rook if the king castles
-                if self.game.Board[row_click][col_click].GetName()[6:] == "KING":
+                elif self.game.Board[row_click][col_click].GetName()[6:] == "KING":
+                    if row_click == 7:
+                        self.UserK_castle = False
+                        self.UserQ_castle = False
+                    else:
+                        self.OppK_castle = False
+                        self.OppQ_castle = False
+
                     if abs(self.king[1] - colID) == 2:
                         if colID == 6:
                             PlacePiece(self.game.Board[rowID][7].GetName(), self.game.Board[rowID][5], self.game.size)
@@ -435,9 +493,11 @@ class Chess(wx.Frame):
                 # Check for en poisson
                 elif self.game.Board[row_click][col_click].GetName()[6:] == "PAWN":
 
+                    self.moves = 0
+
                     if col_click != colID and event.GetEventObject().GetName() == "button":
-                        PlacePiece("button", self.game.Board[self.poisson[0]][self.poisson[1]], self.game.size)
                         self.pieces.remove(self.game.Board[self.poisson[0]][self.poisson[1]].GetName())
+                        PlacePiece("button", self.game.Board[self.poisson[0]][self.poisson[1]], self.game.size)
 
                     elif abs(row_click - rowID) == 2:
                         self.poisson = [rowID, colID]
@@ -450,6 +510,7 @@ class Chess(wx.Frame):
                 # Remove taken piece from list of pieces
                 if event.GetEventObject().GetName() != "button":
                     self.pieces.remove(event.GetEventObject().GetName())
+                    self.moves = 0
 
                 # Place piece in new space
                 PlacePiece(self.game.Board[row_click][col_click].GetName(), event.GetEventObject(), self.game.size)
@@ -462,10 +523,10 @@ class Chess(wx.Frame):
                     dlg = wx.SingleChoiceDialog(self, "", "Choose a piece.",
                                                 ["QUEEN", "ROOK", "BISHOP", "KNIGHT"], wx.OK)
                     if dlg.ShowModal() == wx.ID_OK:
-                        self.game.Board[row_click][col_click].SetName(
-                            self.game.User + "_" + dlg.GetStringSelection())
-                        PlacePiece(self.game.Board[row_click][col_click].GetName(), event.GetEventObject(),
+                        PlacePiece(self.game.User + "_" + dlg.GetStringSelection(), event.GetEventObject(),
                                    self.game.size)
+                        self.pieces.append(self.game.User + "_" + dlg.GetStringSelection())
+                        self.pieces.remove(self.game.User + "_PAWN")
                     dlg.Destroy()
 
                 self.click = 0
