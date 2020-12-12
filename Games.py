@@ -51,7 +51,7 @@ def FromCSV(file):
         with open(file) as csvfile:
             reader = csv.reader(csvfile)
             for row in reader:
-                array.append(row)
+                array.append(tuple(row))
     except IOError:
         pass
     return array

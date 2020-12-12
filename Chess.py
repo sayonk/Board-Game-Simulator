@@ -18,7 +18,7 @@ def gameOver(self):
     for i in range(8):
         for j in range(8):
             if self.game.Board[i][j].GetName()[:5] == self.game.User and self.game.Board[i][j].GetName()[6:] == "KING":
-                self.king = [i, j]
+                self.king = (i, j)
                 break
 
     # Set the king's space to red if it is in check
@@ -43,9 +43,9 @@ def gameOver(self):
             if position in self.board_positions2:
                 draw = True
             else:
-                self.board_positions2.append(position)
+                self.board_positions2.add(position)
         else:
-            self.board_positions.append(position)
+            self.board_positions.add(position)
 
     # Check for insufficient material
     if not draw:
@@ -116,9 +116,9 @@ def isCheck(self, opp, piece, spot, move):
             kingMoved = True
 
         if len(spot):
-            check = pawnAndKnightMoves(self, "", spot[0], spot[1], opp, [], True)
+            check = pawnAndKnightMoves(self, "", spot[0], spot[1], opp, set(), True)
         else:
-            check = pawnAndKnightMoves(self, "", self.king[0], self.king[1], opp, [], True)
+            check = pawnAndKnightMoves(self, "", self.king[0], self.king[1], opp, set(), True)
 
     if not check:
         for i in range(4):
@@ -133,21 +133,21 @@ def isCheck(self, opp, piece, spot, move):
 
             if not move and len(spot):
                 if self.game.Board[spot[0]][spot[1]].GetName() == "button":
-                    check = getFullPath(self, opp, spot[0], spot[1], rowB, colB, "BISHOP", [], True)
+                    check = getFullPath(self, opp, spot[0], spot[1], rowB, colB, "BISHOP", set(), True)
                 else:
                     check = True
             else:
-                check = getFullPath(self, opp, self.king[0], self.king[1], rowB, colB, "BISHOP", [], True)
+                check = getFullPath(self, opp, self.king[0], self.king[1], rowB, colB, "BISHOP", set(), True)
             if check:
                 break
 
             if not move and len(spot):
                 if self.game.Board[spot[0]][spot[1]].GetName() == "button":
-                    check = getFullPath(self, opp, spot[0], spot[1], rowR, colR, "ROOK", [], True)
+                    check = getFullPath(self, opp, spot[0], spot[1], rowR, colR, "ROOK", set(), True)
                 else:
                     check = True
             else:
-                check = getFullPath(self, opp, self.king[0], self.king[1], rowR, colR, "ROOK", [], True)
+                check = getFullPath(self, opp, self.king[0], self.king[1], rowR, colR, "ROOK", set(), True)
             if check:
                 break
 
@@ -165,7 +165,7 @@ def isCheck(self, opp, piece, spot, move):
 # Add the move to the array if it is possible
 def addMove(self, opp, piece, spot, move, arr):
     if not isCheck(self, opp, piece, spot, move):
-        arr.append(spot)
+        arr.add(spot)
 
     return arr
 
@@ -181,7 +181,7 @@ def getFullPath(self, opp, row, col, rowP, colP, piece, arr, checking):
                 self.game.Board[row + int(rowP)][col + int(colP)].GetName()[:5] != self.game.User:
 
             if not checking:
-                arr = addMove(self, opp, [row, col], [row + int(rowP), col + int(colP)], True, arr)
+                arr = addMove(self, opp, (row, col), (row + int(rowP), col + int(colP)), True, arr)
 
             if self.game.Board[row + int(rowP)][col + int(colP)].GetName()[:5] == self.game.Opp:
                 blocked = True
@@ -204,24 +204,24 @@ def getFullPath(self, opp, row, col, rowP, colP, piece, arr, checking):
             # Check if castling is possible
             if self.game.Board[self.king[0]][self.king[1]].GetBackgroundColour() != "red":
                 if opp == -1:
-                    if self.UserK_castle and not isCheck(self, opp, self.king, [7, self.C_col[0]], False) and not \
-                            isCheck(self, opp, self.king, [7, self.C_col[1]], False):
-                        arr.append([7, self.C_col[2]])
+                    if self.UserK_castle and not isCheck(self, opp, self.king, (7, self.C_col[0]), False) and not \
+                            isCheck(self, opp, self.king, (7, self.C_col[1]), False):
+                        arr.add((7, self.C_col[2]))
 
-                    if self.UserQ_castle and not isCheck(self, opp, self.king, [7, self.C_col[3]], False) and not \
-                            isCheck(self, opp, self.king, [7, self.C_col[4]], False) and not \
-                            isCheck(self, opp, self.king, [7, self.C_col[5]], False):
-                        arr.append([7, self.C_col[4]])
+                    if self.UserQ_castle and not isCheck(self, opp, self.king, (7, self.C_col[3]), False) and not \
+                            isCheck(self, opp, self.king, (7, self.C_col[4]), False) and not \
+                            isCheck(self, opp, self.king, (7, self.C_col[5]), False):
+                        arr.add((7, self.C_col[4]))
 
                 else:
-                    if self.OppK_castle and not isCheck(self, opp, self.king, [0, self.C_col[0]], False) and not \
-                            isCheck(self, opp, self.king, [0, self.C_col[1]], False):
-                        arr.append([0, self.C_col[2]])
+                    if self.OppK_castle and not isCheck(self, opp, self.king, (0, self.C_col[0]), False) and not \
+                            isCheck(self, opp, self.king, (0, self.C_col[1]), False):
+                        arr.add((0, self.C_col[2]))
 
-                    if self.OppQ_castle and not isCheck(self, opp, self.king, [0, self.C_col[3]], False) and not \
-                            isCheck(self, opp, self.king, [0, self.C_col[4]], False) and not \
-                            isCheck(self, opp, self.king, [0, self.C_col[5]], False):
-                        arr.append([0, self.C_col[4]])
+                    if self.OppQ_castle and not isCheck(self, opp, self.king, (0, self.C_col[3]), False) and not \
+                            isCheck(self, opp, self.king, (0, self.C_col[4]), False) and not \
+                            isCheck(self, opp, self.king, (0, self.C_col[5]), False):
+                        arr.add((0, self.C_col[4]))
 
     if checking:
         return check
@@ -236,7 +236,7 @@ def pawnAndKnightMoves(self, piece, row, col, opp, arr, checking):
     # If the pawn hasn't moved, it can move 2 up, otherwise only 1 up
     if piece == "PAWN" or checking:
         if not checking and 0 <= row + opp <= 7 and self.game.Board[row + opp][col].GetName() == "button":
-            arr = addMove(self, opp, [row, col], [row + opp, col], True, arr)
+            arr = addMove(self, opp, (row, col), (row + opp, col), True, arr)
 
         for i in range(2):
             if 0 <= col + 1 - 2 * i <= 7 and 0 <= row + opp <= 7 and \
@@ -246,16 +246,16 @@ def pawnAndKnightMoves(self, piece, row, col, opp, arr, checking):
                         check = True
 
                 else:
-                    arr = addMove(self, opp, [row, col], [row + opp, col + 1 - 2 * i], True, arr)
+                    arr = addMove(self, opp, (row, col), (row + opp, col + 1 - 2 * i), True, arr)
 
         if not checking and row == opp + 7 * (1 - opp) / 2 and self.game.Board[row + opp][col].GetName() == "button" \
                 and self.game.Board[row + 2 * opp][col].GetName() == "button":
-            arr = addMove(self, opp, [row, col], [row + 2 * opp, col], True, arr)
+            arr = addMove(self, opp, (row, col), (row + 2 * opp, col), True, arr)
 
         if not checking and len(self.poisson):
             for i in range(2):
                 if 0 <= col + 1 - 2 * i <= 7 and [row, col + 1 - 2 * i] == self.poisson:
-                    arr = addMove(self, opp, [row, col], [row + opp, col + 1 - 2 * i], True, arr)
+                    arr = addMove(self, opp, (row, col), (row + opp, col + 1 - 2 * i), True, arr)
 
     # Checks each spot where the knight is an 'L shape' away from
     if piece == "KNIGHT" or checking:
@@ -270,7 +270,7 @@ def pawnAndKnightMoves(self, piece, row, col, opp, arr, checking):
                         check = True
 
                 elif self.game.Board[row + int(rowK)][col + int(colK)].GetName()[:5] != self.game.User:
-                    arr = addMove(self, opp, [row, col], [row + int(rowK), col + int(colK)], True, arr)
+                    arr = addMove(self, opp, (row, col), (row + int(rowK), col + int(colK)), True, arr)
 
     if checking:
         return check
@@ -280,7 +280,7 @@ def pawnAndKnightMoves(self, piece, row, col, opp, arr, checking):
 
 # Gets an array of valid chess moves given the location of the piece chosen
 def getValidChessMoves(self, row, col):
-    arr = []
+    arr = set()
     piece = self.game.Board[row][col].GetName()[6:]
 
     if self.game.player.GetStringSelection() == self.game.User:
@@ -333,7 +333,7 @@ def getAllMoves(self):
                 if len(self.allMoves[i][j]):
                     self.gameOver = False
             else:
-                self.allMoves[i][j] = []
+                self.allMoves[i][j] = set()
 
 
 class Chess(wx.Frame):
@@ -349,14 +349,14 @@ class Chess(wx.Frame):
 
         self.click = 0
         self.moves = 0
-        self.allMoves = [[[] for i in range(8)] for j in range(8)]
+        self.allMoves = [[set() for i in range(8)] for j in range(8)]
         self.fSpots = []
         self.C_col = []
         self.poisson = []
         self.king = [0, 0]
         self.pieces = []
-        self.board_positions = []
-        self.board_positions2 = []
+        self.board_positions = set()
+        self.board_positions2 = set()
         self.gameOver = False
         self.UserK_castle = True
         self.UserQ_castle = True
@@ -393,11 +393,11 @@ class Chess(wx.Frame):
         if self.game.restart.GetLabel() == "Restart Game":
 
             if self.game.player.GetStringSelection() == "WHITE":
-                self.king = [4, 7]
-                self.C_col = [5, 6, 6, 1, 2, 3]
+                self.king = (4, 7)
+                self.C_col = (5, 6, 6, 1, 2, 3)
             else:
-                self.king = [3, 0]
-                self.C_col = [1, 2, 1, 4, 5, 6]
+                self.king = (3, 0)
+                self.C_col = (1, 2, 1, 4, 5, 6)
                 switchUser(self.game)
 
             getAllMoves(self)
@@ -406,8 +406,8 @@ class Chess(wx.Frame):
             self.moves = 0
             self.fSpots = []
             self.poisson = []
-            self.board_positions = [positionToString(self)]
-            self.board_positions2 = []
+            self.board_positions = {positionToString(self)}
+            self.board_positions2 = set()
             self.UserK_castle = True
             self.UserQ_castle = True
             self.OppK_castle = True
@@ -438,7 +438,7 @@ class Chess(wx.Frame):
 
             checkered(self.game, self.allMoves[row_click][col_click])
 
-            if [rowID, colID] in self.allMoves[row_click][col_click]:
+            if (rowID, colID) in self.allMoves[row_click][col_click]:
 
                 pawnGraduate = False
 
@@ -500,9 +500,9 @@ class Chess(wx.Frame):
                         PlacePiece("button", self.game.Board[self.poisson[0]][self.poisson[1]], self.game.size)
 
                     elif abs(row_click - rowID) == 2:
-                        self.poisson = [rowID, colID]
+                        self.poisson = (rowID, colID)
                     else:
-                        self.poisson = []
+                        self.poisson = ()
 
                         if rowID == 0 or rowID == 7:
                             pawnGraduate = True

@@ -54,7 +54,7 @@ def moveTile(self, event):
 
     # Condition that a space on the board was clicked
     if len(str(event.GetEventObject().GetId())) > 1:
-        self.new_tiles.append(event.GetEventObject().GetId())
+        self.new_tiles.add(event.GetEventObject().GetId())
 
     # Condition that a space on the rack was clicked
     else:
@@ -212,7 +212,7 @@ def moveTile(self, event):
         # Checks if each string in the list of words is a valid scrabble word
         wordCheck = True
         for word in words:
-            if [word.lower()] not in self.dictionary:
+            if (word.lower(),) not in self.dictionary:
                 wordCheck = False
 
         # Checks if all tests are passed that qualifies the play as a valid play
@@ -273,7 +273,7 @@ def takeTileFromBag(self, rack_spot):
 
 # Resets the game board, racks, and tiles
 def resetGame(self):
-    self.new_tiles = []
+    self.new_tiles = set()
     self.click = -1
     self.trade = False
 
@@ -415,7 +415,7 @@ class Scrab(wx.Frame):
         # Extract info from scrabble files
         self.board_setup = FromCSV("assets/CSV/Scrabble_Board.txt")
         self.tiles_file = FromCSV("assets/CSV/Scrabble_Tiles.txt")
-        self.dictionary = FromCSV("assets/CSV/Scrabble_Dictionary.txt")
+        self.dictionary = set(FromCSV("assets/CSV/Scrabble_Dictionary.txt"))
 
         # Fill board with multipliers
         self.multipliers = [[""] * 15 for i in range(15)]
@@ -429,8 +429,8 @@ class Scrab(wx.Frame):
         self.rack_arr = []
         self.comp_rack_arr = []
         self.tiles = []
-        self.new_tiles = []
-        self.trade_tiles = []
+        self.trade_tiles = set()
+        self.new_tiles = set()
         self.click = -1
         self.trade = False
 
@@ -474,13 +474,12 @@ class Scrab(wx.Frame):
             while len(self.new_tiles):
 
                 # Removes tile from the board
-                old_row = getRow(self.new_tiles[-1])
-                old_col = getCol(self.new_tiles[-1])
+                tileRemoved = self.new_tiles.pop()
+                old_row = getRow(tileRemoved)
+                old_col = getCol(tileRemoved)
 
                 board_space = self.game.Board[old_row][old_col]
                 multiplier = self.multipliers[old_row][old_col]
-
-                del self.new_tiles[-1]
 
                 # Iterates through rack until an empty space is found
                 i = 0
@@ -506,7 +505,7 @@ class Scrab(wx.Frame):
 
         # Returns tiles to the rack and disables the whole panel except for the rack
         if not self.trade:
-            self.trade_tiles = []
+            self.trade_tiles = set()
 
             self.pressRecall(event)
 
@@ -561,7 +560,7 @@ class Scrab(wx.Frame):
             PlacePiece(tile.GetName(), tile, self.size)
             tile.Disable()
 
-        self.new_tiles = []
+        self.new_tiles = set()
 
         # Replaces empty spaces on the rack with new tiles from the bag
         for children in self.rack.GetChildren():
@@ -633,7 +632,7 @@ class Scrab(wx.Frame):
                     event.GetEventObject().SetBitmap(
                         wx.Image("assets/IMAGES/GREEN_" + event.GetEventObject().GetName() +
                                  ".png", wx.BITMAP_TYPE_ANY).Scale(self.size, self.size).ConvertToBitmap())
-                    self.trade_tiles.append(event.GetEventObject())
+                    self.trade_tiles.add(event.GetEventObject())
 
                 if len(self.trade_tiles):
                     self.Trade.Enable()

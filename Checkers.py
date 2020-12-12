@@ -41,16 +41,16 @@ def skipOpp(self, row, col, opp):
                 (0 <= col + 2 * i <= 7 and self.game.Board[row + 2 * opp][col + 2 * i].GetName()
                  == "button" and getColour(self.game.Board[row + opp][col + i]) == self.game.Opp):
 
-            self.oppSkipped[row][col].append([row + opp, col + i])
-            arr.append([row + 2 * opp, col + 2 * i])
+            self.oppSkipped[row][col].append((row + opp, col + i))
+            arr.append((row + 2 * opp, col + 2 * i))
 
         if len(self.game.Board[row][col].GetName()) > 6 and i != 0 and \
                 ((row < 6 and opp == -1) or (row > 1 and opp == 1)) and \
                 (0 <= col + 2 * i <= 7 and self.game.Board[row - 2 * opp][col + 2 * i].GetName()
                  == "button" and getColour(self.game.Board[row - opp][col + i]) == self.game.Opp):
 
-            self.oppSkipped[row][col].append([row - opp, col + i])
-            arr.append([row - 2 * opp, col + 2 * i])
+            self.oppSkipped[row][col].append((row - opp, col + i))
+            arr.append((row - 2 * opp, col + 2 * i))
 
     return arr
 
@@ -71,13 +71,13 @@ def getValidCheckMoves(self, row, col):
             if i != 0:
                 if 0 <= col + i <= 7:
                     if 0 <= row + opp <= 7 and self.game.Board[row + opp][col + i].GetName() == "button":
-                        arr.append([row + opp, col + i])
-                        self.oppSkipped[row][col].append([])
+                        arr.append((row + opp, col + i))
+                        self.oppSkipped[row][col].append(())
 
                     if len(self.game.Board[row][col].GetName()) > 6 and 0 <= row - opp <= 7 and \
                             self.game.Board[row - opp][col + i].GetName() == "button":
-                        arr.append([row - opp, col + i])
-                        self.oppSkipped[row][col].append([])
+                        arr.append((row - opp, col + i))
+                        self.oppSkipped[row][col].append(())
 
     return arr
 
@@ -168,7 +168,7 @@ class Check(wx.Frame):
 
             for clicked_piece in range(len(self.allMoves[row_click][col_click])):
 
-                if [rowID, colID] == self.allMoves[row_click][col_click][clicked_piece]:
+                if (rowID, colID) == self.allMoves[row_click][col_click][clicked_piece]:
 
                     moved = True
 
